@@ -1,0 +1,3827 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6284833525931,
+            36.530489002875896
+          ],
+          [
+            136.6288394246754,
+            36.53051993447127
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-01",
+        "from": "C-01",
+        "to": "C-69",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 32
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288394246754,
+            36.53051993447127
+          ],
+          [
+            136.62904112837333,
+            36.53049502179519
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-02",
+        "from": "C-69",
+        "to": "C-14",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 18
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62883427910162,
+            36.53088791958389
+          ],
+          [
+            136.6288394246754,
+            36.53051993447127
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-03",
+        "from": "C-68",
+        "to": "C-69",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 41
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288394246754,
+            36.53051993447127
+          ],
+          [
+            136.6289798973313,
+            36.530851514339986
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-04",
+        "from": "C-69",
+        "to": "C-43",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 39
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6289798973313,
+            36.530851514339986
+          ],
+          [
+            136.6289011715633,
+            36.53106570951687
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-05",
+        "from": "C-43",
+        "to": "C-67",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 25
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6289011715633,
+            36.53106570951687
+          ],
+          [
+            136.62883427910162,
+            36.53088791958389
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-06",
+        "from": "C-67",
+        "to": "C-68",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 21
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6289011715633,
+            36.53106570951687
+          ],
+          [
+            136.62867063649747,
+            36.53128991312144
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-07",
+        "from": "C-67",
+        "to": "C-07",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 32
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62867063649747,
+            36.53128991312144
+          ],
+          [
+            136.62917838079755,
+            36.53093341390023
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-08",
+        "from": "C-07",
+        "to": "C-44",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 60
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62917838079755,
+            36.53093341390023
+          ],
+          [
+            136.62923127815736,
+            36.53101583504866
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-09",
+        "from": "C-44",
+        "to": "C-38",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 10
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62923127815736,
+            36.53101583504866
+          ],
+          [
+            136.62867063649747,
+            36.53128991312144
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-10",
+        "from": "C-38",
+        "to": "C-07",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 59
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62867063649747,
+            36.53128991312144
+          ],
+          [
+            136.6291965953978,
+            36.5314561608736
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-11",
+        "from": "C-07",
+        "to": "C-37",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 51
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6291965953978,
+            36.5314561608736
+          ],
+          [
+            136.62900922861758,
+            36.531541192212956
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-12",
+        "from": "C-37",
+        "to": "C-66",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 19
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62900922861758,
+            36.531541192212956
+          ],
+          [
+            136.6289011715633,
+            36.53106570951687
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-13",
+        "from": "C-66",
+        "to": "C-67",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 54
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62900922861758,
+            36.531541192212956
+          ],
+          [
+            136.62873725527731,
+            36.53158423400572
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-14",
+        "from": "C-66",
+        "to": "C-87",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 25
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62873725527731,
+            36.53158423400572
+          ],
+          [
+            136.62848542350594,
+            36.53162321865901
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-15",
+        "from": "C-87",
+        "to": "C-12",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 23
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62848542350594,
+            36.53162321865901
+          ],
+          [
+            136.62829734517703,
+            36.53151675696459
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-16",
+        "from": "C-12",
+        "to": "C-65",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 21
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62829734517703,
+            36.53151675696459
+          ],
+          [
+            136.6281923012266,
+            36.531637073486436
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-17",
+        "from": "C-65",
+        "to": "C-13",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 16
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62829734517703,
+            36.53151675696459
+          ],
+          [
+            136.62849305948862,
+            36.53139550275479
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-18",
+        "from": "C-65",
+        "to": "C-06",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 22
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62829734517703,
+            36.53151675696459
+          ],
+          [
+            136.62789410900643,
+            36.53115437407689
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-19",
+        "from": "C-65",
+        "to": "C-64",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 54
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62789410900643,
+            36.53115437407689
+          ],
+          [
+            136.6272998662294,
+            36.530774936056446
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-20",
+        "from": "C-64",
+        "to": "C-63",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 68
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6272998662294,
+            36.530774936056446
+          ],
+          [
+            136.62731837151864,
+            36.53145067397219
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-21",
+        "from": "C-63",
+        "to": "C-10",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 75
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62731837151864,
+            36.53145067397219
+          ],
+          [
+            136.62829734517703,
+            36.53151675696459
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-22",
+        "from": "C-10",
+        "to": "C-65",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 88
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62731837151864,
+            36.53145067397219
+          ],
+          [
+            136.62695429727944,
+            36.53121147931971
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-23",
+        "from": "C-10",
+        "to": "C-09",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 42
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62695429727944,
+            36.53121147931971
+          ],
+          [
+            136.62702671692227,
+            36.53097871275881
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-24",
+        "from": "C-09",
+        "to": "C-08",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 27
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62702671692227,
+            36.53097871275881
+          ],
+          [
+            136.6272998662294,
+            36.530774936056446
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-25",
+        "from": "C-08",
+        "to": "C-63",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 33
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6272998662294,
+            36.530774936056446
+          ],
+          [
+            136.62695429727944,
+            36.53121147931971
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-26",
+        "from": "C-63",
+        "to": "C-09",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 58
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6272998662294,
+            36.530774936056446
+          ],
+          [
+            136.6270237354007,
+            36.53057602657367
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-27",
+        "from": "C-63",
+        "to": "C-05",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 33
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6272998662294,
+            36.530774936056446
+          ],
+          [
+            136.6274275460662,
+            36.530476997454585
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-28",
+        "from": "C-63",
+        "to": "C-02",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 35
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6272998662294,
+            36.530774936056446
+          ],
+          [
+            136.62728474193148,
+            36.53018656555571
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-29",
+        "from": "C-63",
+        "to": "C-95",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 66
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62728474193148,
+            36.53018656555571
+          ],
+          [
+            136.62694446477826,
+            36.53000078092407
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-30",
+        "from": "C-95",
+        "to": "C-03",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 37
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62728474193148,
+            36.53018656555571
+          ],
+          [
+            136.62819958432772,
+            36.53020157222868
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-31",
+        "from": "C-95",
+        "to": "C-96",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 82
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62819958432772,
+            36.53020157222868
+          ],
+          [
+            136.6284833525931,
+            36.530489002875896
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-32",
+        "from": "C-96",
+        "to": "C-01",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 41
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6284833525931,
+            36.530489002875896
+          ],
+          [
+            136.62890255946138,
+            36.53025758194947
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-33",
+        "from": "C-01",
+        "to": "C-70",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 45
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62890255946138,
+            36.53025758194947
+          ],
+          [
+            136.62908948662908,
+            36.530180129643085
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-34",
+        "from": "C-70",
+        "to": "C-33",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 19
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62890255946138,
+            36.53025758194947
+          ],
+          [
+            136.62904112837333,
+            36.53049502179519
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-35",
+        "from": "C-70",
+        "to": "C-14",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 29
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62890255946138,
+            36.53025758194947
+          ],
+          [
+            136.62877203844778,
+            36.53000849345321
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-36",
+        "from": "C-70",
+        "to": "C-71",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 30
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62877203844778,
+            36.53000849345321
+          ],
+          [
+            136.6284833525931,
+            36.530489002875896
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-37",
+        "from": "C-71",
+        "to": "C-01",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 59
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62877203844778,
+            36.53000849345321
+          ],
+          [
+            136.62891782525145,
+            36.52995867518703
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-38",
+        "from": "C-71",
+        "to": "C-35",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 14
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62877203844778,
+            36.53000849345321
+          ],
+          [
+            136.6288617716445,
+            36.52967746671064
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-39",
+        "from": "C-71",
+        "to": "C-72",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 38
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288617716445,
+            36.52967746671064
+          ],
+          [
+            136.6289666922675,
+            36.52972624353487
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-40",
+        "from": "C-72",
+        "to": "C-34",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288617716445,
+            36.52967746671064
+          ],
+          [
+            136.62945504070217,
+            36.529676361300915
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-41",
+        "from": "C-72",
+        "to": "C-79",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 53
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62945504070217,
+            36.529676361300915
+          ],
+          [
+            136.62951595786149,
+            36.53013325247562
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-42",
+        "from": "C-79",
+        "to": "C-36",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 51
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62951595786149,
+            36.53013325247562
+          ],
+          [
+            136.6297417687432,
+            36.53050543600723
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-43",
+        "from": "C-36",
+        "to": "C-59",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 46
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62945504070217,
+            36.529676361300915
+          ],
+          [
+            136.6297417687432,
+            36.53050543600723
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-44",
+        "from": "C-79",
+        "to": "C-59",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 96
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6297417687432,
+            36.53050543600723
+          ],
+          [
+            136.62944345972596,
+            36.53069115044869
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-45",
+        "from": "C-59",
+        "to": "C-16",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 34
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62944345972596,
+            36.53069115044869
+          ],
+          [
+            136.6292449762597,
+            36.53069330570577
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-46",
+        "from": "C-16",
+        "to": "C-15",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 18
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6292449762597,
+            36.53069330570577
+          ],
+          [
+            136.62932071001512,
+            36.530810487702
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-47",
+        "from": "C-15",
+        "to": "C-42",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 15
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62932071001512,
+            36.530810487702
+          ],
+          [
+            136.62944345972596,
+            36.53069115044869
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-48",
+        "from": "C-42",
+        "to": "C-16",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 17
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6292449762597,
+            36.53069330570577
+          ],
+          [
+            136.6288394246754,
+            36.53051993447127
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-49",
+        "from": "C-15",
+        "to": "C-69",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 41
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62923127815736,
+            36.53101583504866
+          ],
+          [
+            136.6293985940294,
+            36.530941342282006
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-50",
+        "from": "C-38",
+        "to": "C-41",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 17
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6293985940294,
+            36.530941342282006
+          ],
+          [
+            136.62917838079755,
+            36.53093341390023
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-51",
+        "from": "C-41",
+        "to": "C-44",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 20
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62917838079755,
+            36.53093341390023
+          ],
+          [
+            136.62932071001512,
+            36.530810487702
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-52",
+        "from": "C-44",
+        "to": "C-42",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 19
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62917838079755,
+            36.53093341390023
+          ],
+          [
+            136.6292449762597,
+            36.53069330570577
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-53",
+        "from": "C-44",
+        "to": "C-15",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 27
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6297417687432,
+            36.53050543600723
+          ],
+          [
+            136.62986250438075,
+            36.5311691133101
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-54",
+        "from": "C-59",
+        "to": "C-39",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 75
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62986250438075,
+            36.5311691133101
+          ],
+          [
+            136.63019877154971,
+            36.5312444061762
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-55",
+        "from": "C-39",
+        "to": "C-58",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 31
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63019877154971,
+            36.5312444061762
+          ],
+          [
+            136.6297417687432,
+            36.53050543600723
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-56",
+        "from": "C-58",
+        "to": "C-59",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 92
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6297417687432,
+            36.53050543600723
+          ],
+          [
+            136.6304200753051,
+            36.53042561959303
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-57",
+        "from": "C-59",
+        "to": "C-45",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 61
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6304200753051,
+            36.53042561959303
+          ],
+          [
+            136.63066600608096,
+            36.53030556147671
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-58",
+        "from": "C-45",
+        "to": "C-81",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 26
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63066600608096,
+            36.53030556147671
+          ],
+          [
+            136.63042402859764,
+            36.52961487098028
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-59",
+        "from": "C-81",
+        "to": "C-80",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 80
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63042402859764,
+            36.52961487098028
+          ],
+          [
+            136.62945504070217,
+            36.529676361300915
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-60",
+        "from": "C-80",
+        "to": "C-79",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 87
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288617716445,
+            36.52967746671064
+          ],
+          [
+            136.62854347126466,
+            36.52941750198204
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-61",
+        "from": "C-72",
+        "to": "C-73",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 41
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52941750198204
+          ],
+          [
+            136.62729690640867,
+            36.529516433165384
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-62",
+        "from": "C-73",
+        "to": "C-75",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 112
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62729690640867,
+            36.529516433165384
+          ],
+          [
+            136.62640280662902,
+            36.529603377189204
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-63",
+        "from": "C-75",
+        "to": "C-93",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 81
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62729690640867,
+            36.529516433165384
+          ],
+          [
+            136.62728474193148,
+            36.53018656555571
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-64",
+        "from": "C-75",
+        "to": "C-95",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 75
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62729690640867,
+            36.529516433165384
+          ],
+          [
+            136.62696019139617,
+            36.52936920949038
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-65",
+        "from": "C-75",
+        "to": "C-31",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 34
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62640280662902,
+            36.529603377189204
+          ],
+          [
+            136.62660742066828,
+            36.529375285966154
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-66",
+        "from": "C-93",
+        "to": "C-30",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 31
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62640280662902,
+            36.529603377189204
+          ],
+          [
+            136.62634984614357,
+            36.530933707103955
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-67",
+        "from": "C-93",
+        "to": "C-94",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 148
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62640280662902,
+            36.529603377189204
+          ],
+          [
+            136.6256310898052,
+            36.52981165729672
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-68",
+        "from": "C-93",
+        "to": "C-92",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 73
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62634984614357,
+            36.530933707103955
+          ],
+          [
+            136.62646237723425,
+            36.53194990498214
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-69",
+        "from": "C-94",
+        "to": "C-89",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 114
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62646237723425,
+            36.53194990498214
+          ],
+          [
+            136.6266042506648,
+            36.53083140275946
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-70",
+        "from": "C-89",
+        "to": "C-57",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 125
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6266042506648,
+            36.53083140275946
+          ],
+          [
+            136.6265701009733,
+            36.53056448090952
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-71",
+        "from": "C-57",
+        "to": "C-04",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 30
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6266042506648,
+            36.53083140275946
+          ],
+          [
+            136.6272998662294,
+            36.530774936056446
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-72",
+        "from": "C-57",
+        "to": "C-63",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 63
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62646237723425,
+            36.53194990498214
+          ],
+          [
+            136.62640518641518,
+            36.53219632658866
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-73",
+        "from": "C-89",
+        "to": "C-90",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 28
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62640518641518,
+            36.53219632658866
+          ],
+          [
+            136.6257079255534,
+            36.53218662628021
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-74",
+        "from": "C-90",
+        "to": "C-91",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 62
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6257079255534,
+            36.53218662628021
+          ],
+          [
+            136.6258361461048,
+            36.53274780671123
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-75",
+        "from": "C-91",
+        "to": "C-53",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 64
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6257079255534,
+            36.53218662628021
+          ],
+          [
+            136.62579223384967,
+            36.531520896299924
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-76",
+        "from": "C-91",
+        "to": "C-56",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 74
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6257079255534,
+            36.53218662628021
+          ],
+          [
+            136.6256310898052,
+            36.52981165729672
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-77",
+        "from": "C-91",
+        "to": "C-92",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 264
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6256310898052,
+            36.52981165729672
+          ],
+          [
+            136.62579223384967,
+            36.531520896299924
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-78",
+        "from": "C-92",
+        "to": "C-56",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 191
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62646237723425,
+            36.53194990498214
+          ],
+          [
+            136.6269795018564,
+            36.53204843820825
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-79",
+        "from": "C-89",
+        "to": "C-60",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 48
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6269795018564,
+            36.53204843820825
+          ],
+          [
+            136.62795401895062,
+            36.532141430145884
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-80",
+        "from": "C-60",
+        "to": "C-88",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 88
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62795401895062,
+            36.532141430145884
+          ],
+          [
+            136.62836243212314,
+            36.532041127565535
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-81",
+        "from": "C-88",
+        "to": "C-61",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 38
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62836243212314,
+            36.532041127565535
+          ],
+          [
+            136.6287023967625,
+            36.53197765058523
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-82",
+        "from": "C-61",
+        "to": "C-86",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 31
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6287023967625,
+            36.53197765058523
+          ],
+          [
+            136.62873725527731,
+            36.53158423400572
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-83",
+        "from": "C-86",
+        "to": "C-87",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 44
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62873725527731,
+            36.53158423400572
+          ],
+          [
+            136.62893315100365,
+            36.53203406449917
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-84",
+        "from": "C-87",
+        "to": "C-85",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 53
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62893315100365,
+            36.53203406449917
+          ],
+          [
+            136.63020705818388,
+            36.532082097820435
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-85",
+        "from": "C-85",
+        "to": "C-84",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 114
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63020705818388,
+            36.532082097820435
+          ],
+          [
+            136.63080935508196,
+            36.53200480788759
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-86",
+        "from": "C-84",
+        "to": "C-55",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 55
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63080935508196,
+            36.53200480788759
+          ],
+          [
+            136.6310576739162,
+            36.532070039936585
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-87",
+        "from": "C-55",
+        "to": "C-54",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 23
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6310576739162,
+            36.532070039936585
+          ],
+          [
+            136.6311865865514,
+            36.53189936866188
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-88",
+        "from": "C-54",
+        "to": "C-82",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 22
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6311865865514,
+            36.53189936866188
+          ],
+          [
+            136.63080935508196,
+            36.53200480788759
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-89",
+        "from": "C-82",
+        "to": "C-55",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 36
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63020705818388,
+            36.532082097820435
+          ],
+          [
+            136.6311045564829,
+            36.532643108187386
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-90",
+        "from": "C-84",
+        "to": "C-51",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 102
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6311045564829,
+            36.532643108187386
+          ],
+          [
+            136.6314489038827,
+            36.532574427076
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-91",
+        "from": "C-51",
+        "to": "C-83",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 32
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6314489038827,
+            36.532574427076
+          ],
+          [
+            136.6311865865514,
+            36.53189936866188
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-92",
+        "from": "C-83",
+        "to": "C-82",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 79
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6311865865514,
+            36.53189936866188
+          ],
+          [
+            136.63066600608096,
+            36.53030556147671
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-93",
+        "from": "C-82",
+        "to": "C-81",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 183
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63019877154971,
+            36.5312444061762
+          ],
+          [
+            136.63020705818388,
+            36.532082097820435
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-94",
+        "from": "C-58",
+        "to": "C-84",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 93
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63020705818388,
+            36.532082097820435
+          ],
+          [
+            136.62986250438075,
+            36.5311691133101
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-95",
+        "from": "C-84",
+        "to": "C-39",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 106
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63019877154971,
+            36.5312444061762
+          ],
+          [
+            136.6311865865514,
+            36.53189936866188
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-96",
+        "from": "C-58",
+        "to": "C-82",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 115
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6310576739162,
+            36.532070039936585
+          ],
+          [
+            136.63020705818388,
+            36.532082097820435
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-97",
+        "from": "C-54",
+        "to": "C-84",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 76
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.63020705818388,
+            36.532082097820435
+          ],
+          [
+            136.62947810626167,
+            36.53257034395969
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-98",
+        "from": "C-84",
+        "to": "C-47",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 85
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6311045564829,
+            36.532643108187386
+          ],
+          [
+            136.62947810626167,
+            36.53257034395969
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-99",
+        "from": "C-51",
+        "to": "C-47",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 146
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6281923012266,
+            36.531637073486436
+          ],
+          [
+            136.62772962782066,
+            36.531713274993294
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-100",
+        "from": "C-13",
+        "to": "C-11",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 42
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62772962782066,
+            36.531713274993294
+          ],
+          [
+            136.62829734517703,
+            36.53151675696459
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-101",
+        "from": "C-11",
+        "to": "C-65",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 55
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62849305948862,
+            36.53139550275479
+          ],
+          [
+            136.62848542350594,
+            36.53162321865901
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-102",
+        "from": "C-06",
+        "to": "C-12",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 25
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62772962782066,
+            36.531713274993294
+          ],
+          [
+            136.62731837151864,
+            36.53145067397219
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-103",
+        "from": "C-11",
+        "to": "C-10",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 47
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62795401895062,
+            36.532141430145884
+          ],
+          [
+            136.62772962782066,
+            36.531713274993294
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-104",
+        "from": "C-88",
+        "to": "C-11",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 52
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6269795018564,
+            36.53204843820825
+          ],
+          [
+            136.62772962782066,
+            36.531713274993294
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-105",
+        "from": "C-60",
+        "to": "C-11",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 77
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62877203844778,
+            36.53000849345321
+          ],
+          [
+            136.62819958432772,
+            36.53020157222868
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-106",
+        "from": "C-71",
+        "to": "C-96",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 56
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62694446477826,
+            36.53000078092407
+          ],
+          [
+            136.6270237354007,
+            36.53057602657367
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-107",
+        "from": "C-03",
+        "to": "C-05",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 64
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6270237354007,
+            36.53057602657367
+          ],
+          [
+            136.6274275460662,
+            36.530476997454585
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-108",
+        "from": "C-05",
+        "to": "C-02",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 38
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52941750198204
+          ],
+          [
+            136.62854347126466,
+            36.52903414244989
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-109",
+        "from": "C-73",
+        "to": "C-74",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 43
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52941750198204
+          ],
+          [
+            136.62889177250446,
+            36.5291238851666
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-110",
+        "from": "C-73",
+        "to": "C-46",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 45
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52941750198204
+          ],
+          [
+            136.6276567975924,
+            36.529349077318614
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-111",
+        "from": "C-73",
+        "to": "C-62",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 80
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6276567975924,
+            36.529349077318614
+          ],
+          [
+            136.6273704528549,
+            36.52916305802728
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-112",
+        "from": "C-62",
+        "to": "C-19",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 33
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6273704528549,
+            36.52916305802728
+          ],
+          [
+            136.62729690640867,
+            36.529516433165384
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-113",
+        "from": "C-19",
+        "to": "C-75",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 40
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62729690640867,
+            36.529516433165384
+          ],
+          [
+            136.6276567975924,
+            36.529349077318614
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-114",
+        "from": "C-75",
+        "to": "C-62",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 37
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6276567975924,
+            36.529349077318614
+          ],
+          [
+            136.62809733149953,
+            36.52922340639738
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-115",
+        "from": "C-62",
+        "to": "C-18",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 42
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62809733149953,
+            36.52922340639738
+          ],
+          [
+            136.62854347126466,
+            36.52941750198204
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-116",
+        "from": "C-18",
+        "to": "C-73",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 45
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52903414244989
+          ],
+          [
+            136.62826039293913,
+            36.52907675040191
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-117",
+        "from": "C-74",
+        "to": "C-23",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 26
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62854347126466,
+            36.52903414244989
+          ],
+          [
+            136.62856330897193,
+            36.52876712293933
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-118",
+        "from": "C-74",
+        "to": "C-76",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 30
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62856330897193,
+            36.52876712293933
+          ],
+          [
+            136.62887248990393,
+            36.52870613311936
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-119",
+        "from": "C-76",
+        "to": "C-17",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 28
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62887248990393,
+            36.52870613311936
+          ],
+          [
+            136.62889177250446,
+            36.5291238851666
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-120",
+        "from": "C-17",
+        "to": "C-46",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 47
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62887248990393,
+            36.52870613311936
+          ],
+          [
+            136.62883436457997,
+            36.52846250754659
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-121",
+        "from": "C-17",
+        "to": "C-52",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 27
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62856330897193,
+            36.52876712293933
+          ],
+          [
+            136.6282703151681,
+            36.52877753212569
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-122",
+        "from": "C-76",
+        "to": "C-20",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 26
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6282703151681,
+            36.52877753212569
+          ],
+          [
+            136.62809430651913,
+            36.52870283512216
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-123",
+        "from": "C-20",
+        "to": "C-25",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 18
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6282703151681,
+            36.52877753212569
+          ],
+          [
+            136.62816255640047,
+            36.528834532782795
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-124",
+        "from": "C-20",
+        "to": "C-24",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 12
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62816255640047,
+            36.528834532782795
+          ],
+          [
+            136.6277824547659,
+            36.52855190878664
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-125",
+        "from": "C-24",
+        "to": "C-22",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 46
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6277824547659,
+            36.52855190878664
+          ],
+          [
+            136.62809430651913,
+            36.52870283512216
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-126",
+        "from": "C-22",
+        "to": "C-25",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 33
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62816255640047,
+            36.528834532782795
+          ],
+          [
+            136.62818230373415,
+            36.529093380670844
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-127",
+        "from": "C-24",
+        "to": "C-21",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 29
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62818230373415,
+            36.529093380670844
+          ],
+          [
+            136.62826039293913,
+            36.52907675040191
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-128",
+        "from": "C-21",
+        "to": "C-23",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 7
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62818230373415,
+            36.529093380670844
+          ],
+          [
+            136.62809733149953,
+            36.52922340639738
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-129",
+        "from": "C-21",
+        "to": "C-18",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 16
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62818230373415,
+            36.529093380670844
+          ],
+          [
+            136.6273704528549,
+            36.52916305802728
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-130",
+        "from": "C-21",
+        "to": "C-19",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 73
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62856330897193,
+            36.52876712293933
+          ],
+          [
+            136.6285254622179,
+            36.528028106204346
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-131",
+        "from": "C-76",
+        "to": "C-77",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 82
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6285254622179,
+            36.528028106204346
+          ],
+          [
+            136.62824466927873,
+            36.528099598992085
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-132",
+        "from": "C-77",
+        "to": "C-26",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 26
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62824466927873,
+            36.528099598992085
+          ],
+          [
+            136.628252109279,
+            36.52801896797031
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-133",
+        "from": "C-26",
+        "to": "C-27",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 9
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.628252109279,
+            36.52801896797031
+          ],
+          [
+            136.6285254622179,
+            36.528028106204346
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-134",
+        "from": "C-27",
+        "to": "C-77",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 24
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6285254622179,
+            36.528028106204346
+          ],
+          [
+            136.62793126818258,
+            36.52807372472596
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-135",
+        "from": "C-77",
+        "to": "C-78",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 53
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62793126818258,
+            36.52807372472596
+          ],
+          [
+            136.62824466927873,
+            36.528099598992085
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-136",
+        "from": "C-78",
+        "to": "C-26",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 28
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62793126818258,
+            36.52807372472596
+          ],
+          [
+            136.628252109279,
+            36.52801896797031
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-137",
+        "from": "C-78",
+        "to": "C-27",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 29
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62793126818258,
+            36.52807372472596
+          ],
+          [
+            136.6277824547659,
+            36.52855190878664
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-138",
+        "from": "C-78",
+        "to": "C-22",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 55
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62793126818258,
+            36.52807372472596
+          ],
+          [
+            136.6273454754512,
+            36.5281860558197
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-139",
+        "from": "C-78",
+        "to": "C-32",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 54
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6273454754512,
+            36.5281860558197
+          ],
+          [
+            136.627035680309,
+            36.52823832248072
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-140",
+        "from": "C-32",
+        "to": "C-50",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 28
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6273454754512,
+            36.5281860558197
+          ],
+          [
+            136.627432635196,
+            36.52768257730351
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-141",
+        "from": "C-32",
+        "to": "C-29",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 57
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.627432635196,
+            36.52768257730351
+          ],
+          [
+            136.62793126818258,
+            36.52807372472596
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-142",
+        "from": "C-29",
+        "to": "C-78",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 62
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62841295291219,
+            36.529671778113354
+          ],
+          [
+            136.6288617716445,
+            36.52967746671064
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-143",
+        "from": "C-97",
+        "to": "C-72",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 40
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62841295291219,
+            36.529671778113354
+          ],
+          [
+            136.62854347126466,
+            36.52941750198204
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-144",
+        "from": "C-97",
+        "to": "C-73",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 31
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62728992007908,
+            36.52967030944002
+          ],
+          [
+            136.62729690640867,
+            36.529516433165384
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-145",
+        "from": "C-98",
+        "to": "C-75",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 17
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62728992007908,
+            36.52967030944002
+          ],
+          [
+            136.62841295291219,
+            36.529671778113354
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-146",
+        "from": "C-98",
+        "to": "C-97",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 100
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6288617716445,
+            36.52967746671064
+          ],
+          [
+            136.62889177250446,
+            36.5291238851666
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-147",
+        "from": "C-72",
+        "to": "C-46",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 62
+      }
+    }
+  ]
+}

@@ -88,8 +88,14 @@ export function distanceToPaths(ring: Position[], paths: PathFeature[]): number 
 
 /* ---------------- 経路グラフの検証 ---------------- */
 
-/** 有効な接続だけの隣接リストを作る */
-function adjacency(links: LinkProps[]): Map<string, string[]> {
+/**
+ * 通れる区間の隣接リスト。
+ *
+ * 辺は2種類ある。
+ *  ① links     手動でつないだ区間（主に屋外）
+ *  ② parents   親子関係。子に入るには親のどれか1つを通る必要がある
+ */
+function adjacency(cps: CheckpointFeature[], links: LinkProps[]): Map<string, string[]> {
   const adj = new Map<string, string[]>();
   const add = (a: string, b: string) => {
     const list = adj.get(a);
@@ -100,6 +106,14 @@ function adjacency(links: LinkProps[]): Map<string, string[]> {
     if (!l.enabled) continue;
     add(l.from, l.to);
     add(l.to, l.from);
+  }
+  const ids = new Set(cps.map((c) => c.properties.id));
+  for (const c of cps) {
+    for (const p of c.properties.parents ?? []) {
+      if (!ids.has(p)) continue; // 親が削除済み
+      add(p, c.properties.id);
+      add(c.properties.id, p);
+    }
   }
   return adj;
 }
@@ -121,7 +135,7 @@ export type GraphCheck = {
  */
 export function checkGraph(cps: CheckpointFeature[], links: LinkProps[]): GraphCheck {
   const ids = cps.map((c) => c.properties.id);
-  const adj = adjacency(links);
+  const adj = adjacency(cps, links);
   const isolated = ids.filter((id) => !adj.has(id));
 
   const seen = new Set<string>();

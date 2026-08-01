@@ -1,0 +1,1980 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6284833525931,
+          36.530489002875896
+        ]
+      },
+      "properties": {
+        "id": "C-01",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-01",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6274275460662,
+          36.530476997454585
+        ]
+      },
+      "properties": {
+        "id": "C-02",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-01",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62694446477826,
+          36.53000078092407
+        ]
+      },
+      "properties": {
+        "id": "C-03",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-30",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6265701009733,
+          36.53056448090952
+        ]
+      },
+      "properties": {
+        "id": "C-04",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-39",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6270237354007,
+          36.53057602657367
+        ]
+      },
+      "properties": {
+        "id": "C-05",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-39",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62849305948862,
+          36.53139550275479
+        ]
+      },
+      "properties": {
+        "id": "C-06",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-03",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62867063649747,
+          36.53128991312144
+        ]
+      },
+      "properties": {
+        "id": "C-07",
+        "kind": "entrance",
+        "name": "簡易郵便局出入口",
+        "linkedTo": "B-03",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62702671692227,
+          36.53097871275881
+        ]
+      },
+      "properties": {
+        "id": "C-08",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-42",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62695429727944,
+          36.53121147931971
+        ]
+      },
+      "properties": {
+        "id": "C-09",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-42",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62731837151864,
+          36.53145067397219
+        ]
+      },
+      "properties": {
+        "id": "C-10",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-41",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62772962782066,
+          36.531713274993294
+        ]
+      },
+      "properties": {
+        "id": "C-11",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-02",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62848542350594,
+          36.53162321865901
+        ]
+      },
+      "properties": {
+        "id": "C-12",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-02",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6281923012266,
+          36.531637073486436
+        ]
+      },
+      "properties": {
+        "id": "C-13",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-02",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62904112837333,
+          36.53049502179519
+        ]
+      },
+      "properties": {
+        "id": "C-14",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-05",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6292449762597,
+          36.53069330570577
+        ]
+      },
+      "properties": {
+        "id": "C-15",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-05",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62944345972596,
+          36.53069115044869
+        ]
+      },
+      "properties": {
+        "id": "C-16",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-05",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62887248990393,
+          36.52870613311936
+        ]
+      },
+      "properties": {
+        "id": "C-17",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-18",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62809733149953,
+          36.52922340639738
+        ]
+      },
+      "properties": {
+        "id": "C-18",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-10",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6273704528549,
+          36.52916305802728
+        ]
+      },
+      "properties": {
+        "id": "C-19",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-10",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6282703151681,
+          36.52877753212569
+        ]
+      },
+      "properties": {
+        "id": "C-20",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-12",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62818230373415,
+          36.529093380670844
+        ]
+      },
+      "properties": {
+        "id": "C-21",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-11",
+        "radius": 5,
+        "note": "",
+        "level": 2,
+        "parents": [
+          "C-18",
+          "C-19",
+          "C-23"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6277824547659,
+          36.52855190878664
+        ]
+      },
+      "properties": {
+        "id": "C-22",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-20",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62826039293913,
+          36.52907675040191
+        ]
+      },
+      "properties": {
+        "id": "C-23",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-10",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62816255640047,
+          36.528834532782795
+        ]
+      },
+      "properties": {
+        "id": "C-24",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "B-11",
+        "radius": 5,
+        "note": "",
+        "level": 2,
+        "parents": [
+          "C-20",
+          "C-22"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62809430651913,
+          36.52870283512216
+        ]
+      },
+      "properties": {
+        "id": "C-25",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "B-20",
+        "radius": 5,
+        "note": "",
+        "level": 2,
+        "parents": [
+          "C-20"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62824466927873,
+          36.528099598992085
+        ]
+      },
+      "properties": {
+        "id": "C-26",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-13",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.628252109279,
+          36.52801896797031
+        ]
+      },
+      "properties": {
+        "id": "C-27",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-14",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62686954086064,
+          36.52769874791858
+        ]
+      },
+      "properties": {
+        "id": "C-28",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-24",
+        "radius": 50,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.627432635196,
+          36.52768257730351
+        ]
+      },
+      "properties": {
+        "id": "C-29",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-24",
+        "radius": 50,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62660742066828,
+          36.529375285966154
+        ]
+      },
+      "properties": {
+        "id": "C-30",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-28",
+        "radius": 35,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62696019139617,
+          36.52936920949038
+        ]
+      },
+      "properties": {
+        "id": "C-31",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-28",
+        "radius": 35,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6273454754512,
+          36.5281860558197
+        ]
+      },
+      "properties": {
+        "id": "C-32",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-15",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62908948662908,
+          36.530180129643085
+        ]
+      },
+      "properties": {
+        "id": "C-33",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-06",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6289666922675,
+          36.52972624353487
+        ]
+      },
+      "properties": {
+        "id": "C-34",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-06",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62891782525145,
+          36.52995867518703
+        ]
+      },
+      "properties": {
+        "id": "C-35",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-06",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62951595786149,
+          36.53013325247562
+        ]
+      },
+      "properties": {
+        "id": "C-36",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-06",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6291965953978,
+          36.5314561608736
+        ]
+      },
+      "properties": {
+        "id": "C-37",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-04",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62923127815736,
+          36.53101583504866
+        ]
+      },
+      "properties": {
+        "id": "C-38",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-04",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62986250438075,
+          36.5311691133101
+        ]
+      },
+      "properties": {
+        "id": "C-39",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-04",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6292888483726,
+          36.531618368962214
+        ]
+      },
+      "properties": {
+        "id": "C-40",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-07",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6293985940294,
+          36.530941342282006
+        ]
+      },
+      "properties": {
+        "id": "C-41",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-21",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62932071001512,
+          36.530810487702
+        ]
+      },
+      "properties": {
+        "id": "C-42",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-21",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6289798973313,
+          36.530851514339986
+        ]
+      },
+      "properties": {
+        "id": "C-43",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-22",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62917838079755,
+          36.53093341390023
+        ]
+      },
+      "properties": {
+        "id": "C-44",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-22",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6304200753051,
+          36.53042561959303
+        ]
+      },
+      "properties": {
+        "id": "C-45",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-25",
+        "radius": 12,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62889177250446,
+          36.5291238851666
+        ]
+      },
+      "properties": {
+        "id": "C-46",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-17",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62947810626167,
+          36.53257034395969
+        ]
+      },
+      "properties": {
+        "id": "C-47",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-08",
+        "radius": 10,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6292903138509,
+          36.532212512047735
+        ]
+      },
+      "properties": {
+        "id": "C-48",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "B-08",
+        "radius": 5,
+        "note": "",
+        "level": 2,
+        "parents": [
+          "C-40"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62928607551243,
+          36.53204223187453
+        ]
+      },
+      "properties": {
+        "id": "C-49",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "B-07",
+        "radius": 5,
+        "note": "",
+        "level": 3,
+        "parents": [
+          "C-48"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.627035680309,
+          36.52823832248072
+        ]
+      },
+      "properties": {
+        "id": "C-50",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "B-16",
+        "radius": 5,
+        "note": "",
+        "level": 2,
+        "parents": [
+          "C-32"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6311045564829,
+          36.532643108187386
+        ]
+      },
+      "properties": {
+        "id": "C-51",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-38",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62883436457997,
+          36.52846250754659
+        ]
+      },
+      "properties": {
+        "id": "C-52",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-19",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6258361461048,
+          36.53274780671123
+        ]
+      },
+      "properties": {
+        "id": "C-53",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-27",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6310576739162,
+          36.532070039936585
+        ]
+      },
+      "properties": {
+        "id": "C-54",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-09",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.63080935508196,
+          36.53200480788759
+        ]
+      },
+      "properties": {
+        "id": "C-55",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-26",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62579223384967,
+          36.531520896299924
+        ]
+      },
+      "properties": {
+        "id": "C-56",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-23",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6266042506648,
+          36.53083140275946
+        ]
+      },
+      "properties": {
+        "id": "C-57",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-34",
+        "radius": 15,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.63019877154971,
+          36.5312444061762
+        ]
+      },
+      "properties": {
+        "id": "C-58",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-36",
+        "radius": 18,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6297417687432,
+          36.53050543600723
+        ]
+      },
+      "properties": {
+        "id": "C-59",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-35",
+        "radius": 15,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6269795018564,
+          36.53204843820825
+        ]
+      },
+      "properties": {
+        "id": "C-60",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-40",
+        "radius": 8,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62836243212314,
+          36.532041127565535
+        ]
+      },
+      "properties": {
+        "id": "C-61",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-32",
+        "radius": 8,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6276567975924,
+          36.529349077318614
+        ]
+      },
+      "properties": {
+        "id": "C-62",
+        "kind": "entrance",
+        "name": "",
+        "linkedTo": "B-37",
+        "radius": 15,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6272998662294,
+          36.530774936056446
+        ]
+      },
+      "properties": {
+        "id": "C-63",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62789410900643,
+          36.53115437407689
+        ]
+      },
+      "properties": {
+        "id": "C-64",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62829734517703,
+          36.53151675696459
+        ]
+      },
+      "properties": {
+        "id": "C-65",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62900922861758,
+          36.531541192212956
+        ]
+      },
+      "properties": {
+        "id": "C-66",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6289011715633,
+          36.53106570951687
+        ]
+      },
+      "properties": {
+        "id": "C-67",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62883427910162,
+          36.53088791958389
+        ]
+      },
+      "properties": {
+        "id": "C-68",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6288394246754,
+          36.53051993447127
+        ]
+      },
+      "properties": {
+        "id": "C-69",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62890255946138,
+          36.53025758194947
+        ]
+      },
+      "properties": {
+        "id": "C-70",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62877203844778,
+          36.53000849345321
+        ]
+      },
+      "properties": {
+        "id": "C-71",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6288617716445,
+          36.52967746671064
+        ]
+      },
+      "properties": {
+        "id": "C-72",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62854347126466,
+          36.52941750198204
+        ]
+      },
+      "properties": {
+        "id": "C-73",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62854347126466,
+          36.52903414244989
+        ]
+      },
+      "properties": {
+        "id": "C-74",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62729690640867,
+          36.529516433165384
+        ]
+      },
+      "properties": {
+        "id": "C-75",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62856330897193,
+          36.52876712293933
+        ]
+      },
+      "properties": {
+        "id": "C-76",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6285254622179,
+          36.528028106204346
+        ]
+      },
+      "properties": {
+        "id": "C-77",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62793126818258,
+          36.52807372472596
+        ]
+      },
+      "properties": {
+        "id": "C-78",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62945504070217,
+          36.529676361300915
+        ]
+      },
+      "properties": {
+        "id": "C-79",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.63042402859764,
+          36.52961487098028
+        ]
+      },
+      "properties": {
+        "id": "C-80",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.63066600608096,
+          36.53030556147671
+        ]
+      },
+      "properties": {
+        "id": "C-81",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6311865865514,
+          36.53189936866188
+        ]
+      },
+      "properties": {
+        "id": "C-82",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6314489038827,
+          36.532574427076
+        ]
+      },
+      "properties": {
+        "id": "C-83",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.63020705818388,
+          36.532082097820435
+        ]
+      },
+      "properties": {
+        "id": "C-84",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62893315100365,
+          36.53203406449917
+        ]
+      },
+      "properties": {
+        "id": "C-85",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6287023967625,
+          36.53197765058523
+        ]
+      },
+      "properties": {
+        "id": "C-86",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62873725527731,
+          36.53158423400572
+        ]
+      },
+      "properties": {
+        "id": "C-87",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62795401895062,
+          36.532141430145884
+        ]
+      },
+      "properties": {
+        "id": "C-88",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62646237723425,
+          36.53194990498214
+        ]
+      },
+      "properties": {
+        "id": "C-89",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62640518641518,
+          36.53219632658866
+        ]
+      },
+      "properties": {
+        "id": "C-90",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6257079255534,
+          36.53218662628021
+        ]
+      },
+      "properties": {
+        "id": "C-91",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.6256310898052,
+          36.52981165729672
+        ]
+      },
+      "properties": {
+        "id": "C-92",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62640280662902,
+          36.529603377189204
+        ]
+      },
+      "properties": {
+        "id": "C-93",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62634984614357,
+          36.530933707103955
+        ]
+      },
+      "properties": {
+        "id": "C-94",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62728474193148,
+          36.53018656555571
+        ]
+      },
+      "properties": {
+        "id": "C-95",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62819958432772,
+          36.53020157222868
+        ]
+      },
+      "properties": {
+        "id": "C-96",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62841295291219,
+          36.529671778113354
+        ]
+      },
+      "properties": {
+        "id": "C-97",
+        "kind": "gate",
+        "name": "",
+        "linkedTo": "B-43",
+        "radius": 15,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          136.62728992007908,
+          36.52967030944002
+        ]
+      },
+      "properties": {
+        "id": "C-98",
+        "kind": "waypoint",
+        "name": "",
+        "linkedTo": "",
+        "radius": 5,
+        "note": "",
+        "level": 1,
+        "parents": []
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import {
   ScaleControl,
   type ExpressionSpecification,
   type GeoJSONSource,
+  type MapMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Feature, Polygon, Position } from "geojson";
@@ -41,6 +42,8 @@ import {
   pathKindOf,
   checkpointKindOf,
   nextRoomId,
+  childrenOf,
+  orphanCheckpoints,
   roomCategoryOf,
   floorLabel,
   guessFloor,
@@ -69,10 +72,37 @@ import {
 /** これより遠いと「通路が届いていない」とみなす距離 */
 const REACH_METERS = 25;
 
-type Mode = "none" | "campus" | "building" | "path" | "checkpoint" | "link";
+type Mode = "none" | "campus" | "building" | "path" | "checkpoint" | "child" | "link";
 
 /** 交差点で端点を確実に共有させるための吸着距離 */
 const SNAP_METERS = 4;
+
+/**
+ * クリック位置にいちばん近いチェックポイントを返す。
+ *
+ * queryRenderedFeatures は「実際に描画されている」ことが前提で、
+ * レイヤやスタイルの状態に左右されて当たらないことがある。
+ * 座標を画面座標に変換して距離で選べば、描画の状態に依存せず必ず当たる。
+ */
+function nearestCp(
+  map: MlMap,
+  point: { x: number; y: number },
+  cps: CheckpointFeature[],
+  maxPx = 22,
+): CheckpointFeature | null {
+  let best: CheckpointFeature | null = null;
+  let bestD = maxPx;
+  for (const c of cps) {
+    const [lon, lat] = c.geometry.coordinates;
+    const p = map.project([lon, lat]);
+    const d = Math.hypot(p.x - point.x, p.y - point.y);
+    if (d < bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+  return best;
+}
 
 const MODE_LABEL: Record<Mode, string> = {
   none: "",
@@ -80,6 +110,7 @@ const MODE_LABEL: Record<Mode, string> = {
   building: "場所",
   path: "通路",
   checkpoint: "チェックポイント",
+  child: "この先の場所",
   link: "接続",
 };
 
@@ -147,11 +178,26 @@ export default function MapEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  /** チェックポイントのラベル。建物のラベルとは別に管理する */
+  const cpMarkersRef = useRef<Marker[]>([]);
   const [ready, setReady] = useState(false);
+  const readyRef = useRef(false);
+  readyRef.current = ready;
 
   const [base, setBase] = useState<BaseId>("photo");
   /** 背景を暗くして通路を見やすくするか */
   const [dim, setDim] = useState(false);
+  /** 地図の向き（度・時計回り）。0 が北。ボタンの表示に使う */
+  const [bearing, setBearing] = useState(0);
+  /**
+   * パネルのタブ。
+   * 建物が38件あると一覧だけで画面が埋まり、CPや接続のセクションが
+   * 下に押し出されて見つけられなくなるため、切り替え式にする。
+   */
+  const [tab, setTab] = useState<"places" | "route" | "io">("places");
+  /** ラベルの表示。点を密に置くと文字が重なって作業しにくいので個別に消せるようにする */
+  const [showBuildingLabels, setShowBuildingLabels] = useState(true);
+  const [showCpLabels, setShowCpLabels] = useState(true);
   const [mode, setMode] = useState<Mode>("none");
   const [draft, setDraft] = useState<Position[]>([]);
   const [data, setData] = useState<MapData>(EMPTY_DATA);
@@ -169,6 +215,13 @@ export default function MapEditor() {
   modeRef.current = mode;
   const dataRef = useRef(data);
   dataRef.current = data;
+  /**
+   * 地図のイベントハンドラ。
+   * 登録は初期化時の1回だけなので、中身は ref に入れて毎回差し替える。
+   * こうしないとホットリロード後も初回のコードが動き続ける。
+   */
+  const clickRef = useRef<(e: MapMouseEvent) => void>(() => {});
+  const moveRef = useRef<(e: MapMouseEvent) => void>(() => {});
 
   /** 直近の作図で吸着した回数。交差点がつながった手応えを出すため */
   const [snapCount, setSnapCount] = useState(0);
@@ -178,6 +231,10 @@ export default function MapEditor() {
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
   const linkFromRef = useRef<string | null>(null);
   linkFromRef.current = linkFrom;
+  /** 「この先の場所」を置くときの親チェックポイント */
+  const [childParent, setChildParent] = useState<string | null>(null);
+  const childParentRef = useRef<string | null>(null);
+  childParentRef.current = childParent;
 
   /* ---------------- 初期化 ---------------- */
 
@@ -187,6 +244,9 @@ export default function MapEditor() {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    // 前の地図の canvas が残っていると重なって描画が崩れる。
+    // ホットリロードで作り直されたときのために毎回きれいにする。
+    containerRef.current.innerHTML = "";
 
     // MapLibre は WebGL2 を必要とする。使えない環境では地図が一切描画されないため、
     // 「真っ白で原因不明」にならないよう先に確認して画面に出す。
@@ -249,10 +309,29 @@ export default function MapEditor() {
       });
     });
 
+    // 右クリックドラッグでも回せるので、その結果もボタンの表示に反映する
+    map.on("rotate", () => setBearing(map.getBearing()));
+
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
 
     map.on("load", () => {
+      // レイヤ定義の1つが例外を投げると、以降のレイヤが全て作られないまま
+      // 無言で終わる（実際にそれで CP が押せない不具合が出た）。
+      // まとめて捕まえて画面に出す。
+      try {
+        buildLayers(map);
+        console.log("[layers] 作成完了");
+        setReady(true);
+      } catch (err) {
+        console.error("[layers] 途中で失敗", err);
+        setFatal(
+          `地図のレイヤを作成できませんでした: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    });
+
+    function buildLayers(map: MlMap) {
       const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
       map.addSource("campus", { type: "geojson", data: empty });
       map.addSource("buildings", { type: "geojson", data: empty });
@@ -331,12 +410,19 @@ export default function MapEditor() {
             pathKindExpr("color"),
           ],
           "line-width": pathKindExpr("width"),
-          "line-dasharray": [
-            "case",
-            ["!", ["boolean", ["get", "enabled"], true]],
-            ["literal", [2, 2]],
-            ["literal", [1, 0]],
-          ],
+        },
+      });
+      // 同上。除外中の参考線は別レイヤで破線にする
+      map.addLayer({
+        id: "paths-disabled",
+        type: "line",
+        source: "paths",
+        filter: ["!", ["boolean", ["get", "enabled"], true]],
+        layout: { "line-cap": "butt" },
+        paint: {
+          "line-color": "#e2e8f0",
+          "line-width": pathKindExpr("width"),
+          "line-dasharray": [2, 2],
         },
       });
       // 屋根付きは白い破線を重ねて区別する
@@ -396,8 +482,8 @@ export default function MapEditor() {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": "#0f172a",
-          "line-width": ["+", pathKindExpr("width"), 5],
-          "line-opacity": 0.85,
+          "line-width": ["+", pathKindExpr("width"), 7],
+          "line-opacity": 0.9,
         },
       });
       map.addLayer({
@@ -414,13 +500,54 @@ export default function MapEditor() {
             "#94a3b8",
             pathKindExpr("color"),
           ],
-          "line-width": ["+", pathKindExpr("width"), 1],
-          "line-dasharray": [
-            "case",
-            ["!", ["boolean", ["get", "enabled"], true]],
-            ["literal", [2, 2]],
-            ["literal", [1, 0]],
-          ],
+          // 経路グラフは作図の主役なので、下書きの通路線より太くする
+          "line-width": ["+", pathKindExpr("width"), 2.5],
+        },
+      });
+      // ★ line-dasharray はデータ依存の式を受け付けない（addLayer が例外を投げ、
+      //    以降のレイヤが全て作られなくなる）。除外中の表現は別レイヤで重ねる。
+      map.addLayer({
+        id: "links-disabled",
+        type: "line",
+        source: "links",
+        filter: ["!", ["boolean", ["get", "enabled"], true]],
+        layout: { "line-cap": "butt" },
+        paint: {
+          "line-color": "#e2e8f0",
+          "line-width": ["+", pathKindExpr("width"), 2.5],
+          "line-dasharray": [2, 2],
+        },
+      });
+
+      // 接続中に「今どこへつなごうとしているか」を出す。
+      // 押した点とカーソルの間に線を引くと、操作している実感が出る
+      map.addSource("link-preview", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "link-preview-line",
+        type: "line",
+        source: "link-preview",
+        layout: { "line-cap": "round" },
+        paint: {
+          "line-color": "#0ea5e9",
+          "line-width": 3,
+          "line-dasharray": [2, 1.5],
+          "line-opacity": 0.9,
+        },
+      });
+
+      // 親子関係。「ここを通らないと入れない」を表す線。
+      // 屋外の接続とは意味が違うので、紫の点線で区別する
+      map.addSource("hier", { type: "geojson", data: empty });
+      map.addLayer({
+        id: "hier-line",
+        type: "line",
+        source: "hier",
+        layout: { "line-cap": "round" },
+        paint: {
+          "line-color": "#7c3aed",
+          "line-width": 2.5,
+          "line-dasharray": [1, 1.5],
+          "line-opacity": 0.9,
         },
       });
 
@@ -449,13 +576,23 @@ export default function MapEditor() {
         type: "circle",
         source: "checkpoints",
         paint: {
-          "circle-radius": ["case", ["boolean", ["get", "isSelected"], false], 9, 6],
+          // 深い階層ほど小さく描き、外から入れる点（レベル1）を目立たせる
+          "circle-radius": [
+            "case",
+            ["boolean", ["get", "isSelected"], false],
+            9,
+            ["==", ["get", "level"], 1],
+            6,
+            4.5,
+          ],
           "circle-color": ["get", "color"],
           "circle-stroke-color": [
             "case",
             ["boolean", ["get", "isSelected"], false],
             "#ea580c",
+            ["==", ["get", "level"], 1],
             "#ffffff",
+            "#7c3aed",
           ],
           "circle-stroke-width": 2.5,
         },
@@ -487,18 +624,49 @@ export default function MapEditor() {
           "circle-stroke-width": 2,
         },
       });
+    }
 
-      setReady(true);
-    });
+    // ★ハンドラは ref 経由で呼ぶ。
+    //   この効果は依存配列が空で一度しか走らないため、直接登録すると
+    //   ホットリロード後も初回のコードが動き続け、修正が反映されない。
+    //   中身は毎回の描画で差し替える（下の handleMapClick / handleMapMove）。
+    map.on("click", (e) => clickRef.current(e));
+    map.on("mousemove", (e) => moveRef.current(e));
 
-    map.on("click", (e) => {
+    // 置き場所の大きさが変わったら地図に測り直させる。
+    // ウィンドウのリサイズだけでなく、初回描画直後にレイアウトが確定する場合にも効く。
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+
+    mapRef.current = map;
+    return () => {
+      ro.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  /* ---------------- 地図の操作 ---------------- */
+
+  /**
+   * 地図のクリック。毎回の描画で ref に入れ直すので、
+   * ホットリロードでも常に最新のコードが動く。
+   */
+  clickRef.current = (e: MapMouseEvent) => {
+    const map = mapRef.current;
+    if (!map) return;
+    {
       const pt: Position = [e.lngLat.lng, e.lngLat.lat];
 
       if (modeRef.current === "none") {
         // 小さいものから順に判定する（狙って押しているはずなので）
-        const hitCp = map.queryRenderedFeatures(e.point, { layers: ["cp-circle"] });
-        if (hitCp.length) {
-          setSelected(String(hitCp[0].properties?.id ?? ""));
+        const nearCp = nearestCp(
+          map,
+          e.point,
+          dataRef.current.checkpoints.features as CheckpointFeature[],
+        );
+        if (nearCp) {
+          setSelected(nearCp.properties.id);
           return;
         }
         const hitLink = map.queryRenderedFeatures(e.point, { layers: ["links-line"] });
@@ -518,9 +686,19 @@ export default function MapEditor() {
 
       if (modeRef.current === "link") {
         // チェックポイントを2つ順に押すと、その間に接続を作る
-        const hit = map.queryRenderedFeatures(e.point, { layers: ["cp-circle"] });
-        if (!hit.length) return;
-        const id = String(hit[0].properties?.id ?? "");
+        const near = nearestCp(
+          map,
+          e.point,
+          dataRef.current.checkpoints.features as CheckpointFeature[],
+        );
+        if (!near) {
+          setNotice({
+            kind: "warn",
+            text: "近くにチェックポイントがありません。丸の近くをクリックしてください。",
+          });
+          return;
+        }
+        const id = near.properties.id;
         const from = linkFromRef.current;
 
         if (!from) {
@@ -538,7 +716,19 @@ export default function MapEditor() {
             (l) =>
               (l.from === from && l.to === id) || (l.from === id && l.to === from),
           );
-          if (exists) return prev;
+          if (exists) {
+            setNotice({ kind: "warn", text: `${from} と ${id} は既につながっています。` });
+            return prev;
+          }
+          // つながった手応えを出す。距離も一緒に見せる
+          const a = prev.checkpoints.features.find((c) => c.properties.id === from);
+          const b = prev.checkpoints.features.find((c) => c.properties.id === id);
+          const m =
+            a && b ? Math.round(metersBetween(a.geometry.coordinates, b.geometry.coordinates)) : 0;
+          setNotice({
+            kind: "ok",
+            text: `${from} ━ ${id} をつなぎました（${m}m）。接続 ${prev.links.length + 1} 本目。`,
+          });
           return {
             ...prev,
             links: [
@@ -560,7 +750,7 @@ export default function MapEditor() {
         return;
       }
 
-      if (modeRef.current === "checkpoint") {
+      if (modeRef.current === "checkpoint" || modeRef.current === "child") {
         // 1クリックで1個置く。通路の頂点に吸着させて、経路グラフに確実に乗せる
         const { pos } = snapToVertices(
           pt,
@@ -568,16 +758,24 @@ export default function MapEditor() {
           [],
           SNAP_METERS,
         );
-        const id = nextCheckpointId(
-          dataRef.current.checkpoints.features as CheckpointFeature[],
-        );
+        const cpsNow = dataRef.current.checkpoints.features as CheckpointFeature[];
+        const id = nextCheckpointId(cpsNow);
+
+        // 「この先の場所」として置く場合は、親を通らないと入れない子にする
+        const parentId = modeRef.current === "child" ? childParentRef.current : null;
+        const parent = parentId
+          ? cpsNow.find((c) => c.properties.id === parentId)
+          : undefined;
+
         const props: CheckpointProps = {
           id,
-          kind: "entrance",
+          kind: parent ? "waypoint" : "entrance",
           name: "",
           linkedTo: "",
-          radius: CHECKPOINT_KINDS[0].radius,
+          radius: parent ? CHECKPOINT_KINDS[2].radius : CHECKPOINT_KINDS[0].radius,
           note: "",
+          level: parent ? parent.properties.level + 1 : 1,
+          parents: parent ? [parent.properties.id] : [],
         };
         setData((prev) => ({
           ...prev,
@@ -610,9 +808,40 @@ export default function MapEditor() {
       }
 
       setDraft((prev) => [...prev, pt]);
-    });
+    }
+  };
 
-    map.on("mousemove", (e) => {
+  /** マウス移動。接続中の線と、カーソルの形を出す */
+  moveRef.current = (e: MapMouseEvent) => {
+    const map = mapRef.current;
+    if (!map) return;
+    {
+      // 接続の起点を押した後は、カーソルまで線を伸ばして見せる
+      if (modeRef.current === "link") {
+        map.getCanvas().style.cursor = "crosshair";
+        const from = linkFromRef.current;
+        const a = from
+          ? (dataRef.current.checkpoints.features as CheckpointFeature[]).find(
+              (c) => c.properties.id === from,
+            )?.geometry.coordinates
+          : undefined;
+        (map.getSource("link-preview") as GeoJSONSource)?.setData({
+          type: "FeatureCollection",
+          features: a
+            ? [
+                {
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: [a, [e.lngLat.lng, e.lngLat.lat]],
+                  },
+                  properties: {},
+                },
+              ]
+            : [],
+        });
+        return;
+      }
       if (modeRef.current !== "none") {
         map.getCanvas().style.cursor = "crosshair";
         return;
@@ -621,20 +850,8 @@ export default function MapEditor() {
         layers: ["buildings-fill", "paths-line", "links-line", "cp-circle"],
       });
       map.getCanvas().style.cursor = hit.length ? "pointer" : "";
-    });
-
-    // 置き場所の大きさが変わったら地図に測り直させる。
-    // ウィンドウのリサイズだけでなく、初回描画直後にレイアウトが確定する場合にも効く。
-    const ro = new ResizeObserver(() => map.resize());
-    ro.observe(containerRef.current);
-
-    mapRef.current = map;
-    return () => {
-      ro.disconnect();
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
+    }
+  };
 
   /* ---------------- ベースマップ切替 ---------------- */
 
@@ -656,6 +873,11 @@ export default function MapEditor() {
     const map = mapRef.current;
     if (!map || !ready) return;
 
+    /**
+     * スタイルの読み込みが終わっていないと setData が描画に反映されない。
+     * 一度実行し、まだなら落ち着いた時点（idle）でもう一度実行する。
+     */
+    const apply = () => {
     (map.getSource("campus") as GeoJSONSource)?.setData(data.campus);
 
     (map.getSource("paths") as GeoJSONSource)?.setData({
@@ -708,7 +930,7 @@ export default function MapEditor() {
     const cps = data.checkpoints.features as CheckpointFeature[];
     const cpPos = new Map(cps.map((f) => [f.properties.id, f.geometry.coordinates]));
 
-    (map.getSource("checkpoints") as GeoJSONSource)?.setData({
+    const cpFc: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: cps.map((f) => ({
         ...f,
@@ -718,24 +940,91 @@ export default function MapEditor() {
           isSelected: f.properties.id === selected || f.properties.id === linkFrom,
         },
       })),
+    };
+    const cpSrc = map.getSource("checkpoints") as GeoJSONSource | undefined;
+    // ?. で握り潰すと「何も起きない」だけになるので、欠けていたら記録する
+    if (!cpSrc) {
+      console.error("[CP] ソース checkpoints が存在しません", {
+        sources: Object.keys(map.getStyle()?.sources ?? {}),
+        layers: (map.getStyle()?.layers ?? []).map((l) => l.id),
+      });
+    } else {
+      cpSrc.setData(cpFc);
+      // 操作している地図が本当に画面に出ているものか確かめる。
+      // 古い地図オブジェクトを掴んでいると、setData は成功するのに何も描かれない。
+      const el = map.getContainer();
+      console.log("[CP] setData", {
+        送った件数: cpFc.features.length,
+        画面にある: typeof document !== "undefined" && document.body.contains(el),
+        canvas: `${map.getCanvas().clientWidth}x${map.getCanvas().clientHeight}`,
+        loaded: map.loaded(),
+        styleLoaded: map.isStyleLoaded(),
+        レイヤ数: map.getStyle()?.layers?.length ?? -1,
+        建物描画数: map.queryRenderedFeatures({ layers: ["buildings-fill"] }).length,
+      });
+    }
+
+    // 親子関係の線。子から各親へ引く（親が複数ならその数だけ出る）
+    (map.getSource("hier") as GeoJSONSource)?.setData({
+      type: "FeatureCollection",
+      features: cps.flatMap((c) =>
+        c.properties.parents.flatMap((pid) => {
+          const a = cpPos.get(pid);
+          const b = c.geometry.coordinates;
+          if (!a) return [];
+          return [
+            {
+              type: "Feature" as const,
+              geometry: { type: "LineString" as const, coordinates: [a, b] },
+              properties: { from: pid, to: c.properties.id },
+            },
+          ];
+        }),
+      ),
     });
 
     // 接続の線はチェックポイントの座標から毎回作る。点を動かしても線がずれない
+    const linkFeatures = data.links.flatMap((l) => {
+      const a = cpPos.get(l.from);
+      const b = cpPos.get(l.to);
+      if (!a || !b) return []; // 片方が削除済み
+      return [
+        {
+          type: "Feature" as const,
+          geometry: { type: "LineString" as const, coordinates: [a, b] },
+          properties: { ...l, isSelected: l.id === selected },
+        },
+      ];
+    });
+    if (data.links.length > 0) {
+      console.log("[LINK] draw", {
+        links: data.links.length,
+        drawn: linkFeatures.length,
+        layer: !!map.getLayer("links-line"),
+      });
+    }
     (map.getSource("links") as GeoJSONSource)?.setData({
       type: "FeatureCollection",
-      features: data.links.flatMap((l) => {
-        const a = cpPos.get(l.from);
-        const b = cpPos.get(l.to);
-        if (!a || !b) return []; // 片方が削除済み
-        return [
-          {
-            type: "Feature" as const,
-            geometry: { type: "LineString" as const, coordinates: [a, b] },
-            properties: { ...l, isSelected: l.id === selected },
-          },
-        ];
-      }),
+      features: linkFeatures,
     });
+    if (cps.length > 0) {
+      // ソースに入っている数と、実際に描画されている数を比べる。
+      // 前者だけ多いなら描画（paint 定義）の問題、両方0ならデータが届いていない。
+      requestAnimationFrame(() => {
+        try {
+          console.log("[CP] draw", {
+            cps: cps.length,
+            links: data.links.length,
+            cpInSource: map.querySourceFeatures("checkpoints").length,
+            cpRendered: map.queryRenderedFeatures({ layers: ["cp-circle"] }).length,
+            linkInSource: map.querySourceFeatures("links").length,
+            linkRendered: map.queryRenderedFeatures({ layers: ["links-line"] }).length,
+          });
+        } catch (err) {
+          console.log("[CP] draw 失敗", String(err));
+        }
+      });
+    }
     (map.getSource("cp-area") as GeoJSONSource)?.setData({
       type: "FeatureCollection",
       features: cps.map((f) => ({
@@ -750,7 +1039,7 @@ export default function MapEditor() {
 
     // ラベルは HTML マーカーで出す（ラスタのみのスタイルには glyphs が無いため）
     markersRef.current.forEach((m) => m.remove());
-    markersRef.current = data.buildings.features.map((f) => {
+    markersRef.current = !showBuildingLabels ? [] : data.buildings.features.map((f) => {
       const cat = categoryOf(f.properties.category);
       const el = document.createElement("div");
       el.textContent = buildingLabel(f.properties);
@@ -772,7 +1061,116 @@ export default function MapEditor() {
         .addTo(map);
     });
 
-  }, [data, selected, ready, linkFrom]);
+    // チェックポイントのラベル。どの点がどれか地図上で見分けられるようにする。
+    // 点が重なって読めなくならないよう、丸の少し上に小さく出す。
+    cpMarkersRef.current.forEach((m) => m.remove());
+    cpMarkersRef.current = !showCpLabels ? [] : cps.map((f) => {
+      const k = checkpointKindOf(f.properties.kind);
+      const el = document.createElement("div");
+      el.textContent = f.properties.name || f.properties.id;
+      el.className =
+        "px-1 py-0.5 rounded text-[10px] font-bold leading-none whitespace-nowrap " +
+        "shadow-sm pointer-events-none border";
+      const on = f.properties.id === selected || f.properties.id === linkFrom;
+      el.style.backgroundColor = on ? "#ea580c" : "rgba(255,255,255,0.92)";
+      el.style.borderColor = on ? "#ea580c" : k.color;
+      el.style.color = on ? "#ffffff" : k.color;
+      return new Marker({ element: el, offset: [0, -14] })
+        .setLngLat(f.geometry.coordinates as [number, number])
+        .addTo(map);
+    });
+    };
+
+    apply();
+    // まだ読み込み中なら、落ち着いた時点でもう一度入れ直す。
+    // これが無いと、初回に渡したデータが反映されないまま残る。
+    if (!map.isStyleLoaded()) {
+      map.once("idle", apply);
+      return () => {
+        map.off("idle", apply);
+      };
+    }
+  }, [data, selected, ready, linkFrom, showBuildingLabels, showCpLabels]);
+
+  /* ---------------- 地図の上に重ねる描画 ---------------- */
+
+  /**
+   * MapLibre のレイヤ経由の描画が反映されないため、
+   * CPと接続だけは地図の上に SVG を重ねて自前で描く。
+   * 地図が動くたびに座標を計算し直す。
+   */
+  const [viewTick, setViewTick] = useState(0);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const bump = () => setViewTick((v) => v + 1);
+    for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) {
+      map.on(ev, bump);
+    }
+    bump();
+    return () => {
+      for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) {
+        map.off(ev, bump);
+      }
+    };
+  }, [ready]);
+
+  /** 画面座標に変換したCPと接続。viewTick が変わるたびに作り直す */
+  const overlay = useMemo(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return null;
+    void viewTick; // 地図が動いたら作り直すための依存
+
+    const cps = data.checkpoints.features as CheckpointFeature[];
+    const pos = new Map<string, { x: number; y: number }>();
+    for (const c of cps) {
+      const [lon, lat] = c.geometry.coordinates;
+      const p = map.project([lon, lat]);
+      pos.set(c.properties.id, { x: p.x, y: p.y });
+    }
+
+    const lines = data.links.flatMap((l) => {
+      const a = pos.get(l.from);
+      const b = pos.get(l.to);
+      if (!a || !b) return [];
+      return [{ l, a, b }];
+    });
+
+    const hier = cps.flatMap((c) =>
+      c.properties.parents.flatMap((pid) => {
+        const a = pos.get(pid);
+        const b = pos.get(c.properties.id);
+        return a && b ? [{ a, b, key: `${pid}-${c.properties.id}` }] : [];
+      }),
+    );
+
+    return { cps, pos, lines, hier };
+  }, [data.checkpoints.features, data.links, ready, viewTick]);
+
+  /** 選んだものに応じてタブを切り替える。編集欄が隠れたままにならないように */
+  useEffect(() => {
+    if (!selected) return;
+    if (selected.startsWith("B-")) setTab("places");
+    else if (selected.startsWith("C-") || selected.startsWith("L-")) setTab("route");
+    else if (selected.startsWith("P-")) setTab("route");
+  }, [selected]);
+
+  /** 接続モードを抜けたら、伸ばしかけの線を消す */
+  useEffect(() => {
+    if (mode === "link" && linkFrom) return;
+    const src = mapRef.current?.getSource("link-preview") as GeoJSONSource | undefined;
+    src?.setData({ type: "FeatureCollection", features: [] });
+  }, [mode, linkFrom]);
+
+  /** モードに応じてもタブを合わせる */
+  useEffect(() => {
+    if (mode === "checkpoint" || mode === "child" || mode === "link" || mode === "path") {
+      setTab("route");
+    } else if (mode === "building" || mode === "campus") {
+      setTab("places");
+    }
+  }, [mode]);
 
   /* ---------------- 自動保存 ---------------- */
 
@@ -901,6 +1299,7 @@ export default function MapEditor() {
     setDraft([]);
     setMode("none");
     setLinkFrom(null);
+    setChildParent(null);
   }, []);
 
   /**
@@ -1005,6 +1404,25 @@ export default function MapEditor() {
   const flyTo = (f: BuildingFeature) => {
     mapRef.current?.flyTo({ center: ringCenter(f.geometry.coordinates[0]), zoom: 18 });
     setSelected(f.properties.tempId);
+  };
+
+  /** 地図の向きを変える。角度は度、時計回りが正 */
+  const rotateBy = (deg: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({ bearing: map.getBearing() + deg, duration: 200 });
+  };
+
+  /** 北を上に戻す */
+  const resetNorth = () => {
+    mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 300 });
+  };
+
+  /** チェックポイントの位置へ地図を動かす。一覧から場所を確かめるため */
+  const flyToCp = (f: CheckpointFeature) => {
+    const [lon, lat] = f.geometry.coordinates;
+    mapRef.current?.flyTo({ center: [lon, lat], zoom: 19 });
+    setSelected(f.properties.id);
   };
 
   const importFile = async (file: File) => {
@@ -1167,8 +1585,24 @@ export default function MapEditor() {
       ...prev,
       checkpoints: {
         type: "FeatureCollection",
-        features: prev.checkpoints.features.filter((f) => f.properties.id !== id),
+        features: prev.checkpoints.features
+          .filter((f) => f.properties.id !== id)
+          // 削除したCPを親に持つ子から、その親を外す。
+          // 残しておくと存在しない親を指したままになる
+          .map((f) =>
+            f.properties.parents.includes(id)
+              ? {
+                  ...f,
+                  properties: {
+                    ...f.properties,
+                    parents: f.properties.parents.filter((p) => p !== id),
+                  },
+                }
+              : f,
+          ),
       },
+      // 削除したCPにつながっていた接続も消す
+      links: prev.links.filter((l) => l.from !== id && l.to !== id),
     }));
     setSelected(null);
   };
@@ -1261,6 +1695,66 @@ export default function MapEditor() {
     setData((prev) => ({ ...prev, rooms: prev.rooms.filter((r) => r.id !== id) }));
   };
 
+  /* ---------------- チェックポイントの階層 ---------------- */
+
+  const allCps = data.checkpoints.features as CheckpointFeature[];
+
+  /** 選択中のCPの直下の子 */
+  const childrenOfSelected = useMemo(
+    () => (selectedCp ? childrenOf(allCps, selectedCp.properties.id) : []),
+    [allCps, selectedCp],
+  );
+
+  /** 親を持たない level 2以上のCP。どこからも入れない */
+  const orphans = useMemo(() => orphanCheckpoints(allCps), [allCps]);
+
+  /** 親を1つ足す。既にあれば何もしない */
+  const addParent = (childId: string, parentId: string) => {
+    if (!parentId || childId === parentId) return;
+    setData((prev) => ({
+      ...prev,
+      checkpoints: {
+        type: "FeatureCollection",
+        features: prev.checkpoints.features.map((f) => {
+          if (f.properties.id !== childId) return f;
+          if (f.properties.parents.includes(parentId)) return f;
+          const parent = prev.checkpoints.features.find(
+            (p) => p.properties.id === parentId,
+          );
+          return {
+            ...f,
+            properties: {
+              ...f.properties,
+              parents: [...f.properties.parents, parentId],
+              // 親が増えたら、いちばん浅い親の1つ下に合わせる
+              level: Math.max(2, (parent?.properties.level ?? 1) + 1),
+            },
+          };
+        }),
+      },
+    }));
+  };
+
+  const removeParent = (childId: string, parentId: string) => {
+    setData((prev) => ({
+      ...prev,
+      checkpoints: {
+        type: "FeatureCollection",
+        features: prev.checkpoints.features.map((f) =>
+          f.properties.id === childId
+            ? {
+                ...f,
+                properties: {
+                  ...f.properties,
+                  parents: f.properties.parents.filter((p) => p !== parentId),
+                },
+              }
+            : f,
+        ),
+      },
+    }));
+  };
+
   /** 到着判定のチェックポイントが1つも紐づいていない場所 */
   const noEntrance = useMemo(() => {
     const linked = new Set(
@@ -1331,6 +1825,13 @@ export default function MapEditor() {
         hint: "2つ押すとその区間が通れるようになります。続けて押していくと数珠つなぎに引けます。つないでいない区間は通れません。終えるなら Esc。",
       };
     }
+    if (mode === "child") {
+      return {
+        step: 4,
+        title: `${childParent} の先の場所を置く`,
+        hint: "地図をクリックすると、その場所へは必ず親を通ってから入る扱いになります。別の入口からも入れる場合は、置いたあと「入口を追加」で親を足してください。終えるなら Esc。",
+      };
+    }
     if (mode === "checkpoint") {
       return {
         step: 4,
@@ -1394,6 +1895,13 @@ export default function MapEditor() {
         hint: `切り離されているCP：${[...graph.isolated, ...graph.unreachable].slice(0, 6).join(" / ")}。ここへは案内できません。本体とつないでください。`,
       };
     }
+    if (orphans.length > 0) {
+      return {
+        step: 5,
+        title: `入口が設定されていないCPが ${orphans.length} 件あります`,
+        hint: `${orphans.map((o) => o.properties.id).slice(0, 6).join(" / ")}。レベル2以上なのに親が無いため、どこからも入れません。CPを選んで「入口を追加」してください。`,
+      };
+    }
     if (noEntrance.length > 0) {
       return {
         step: 5,
@@ -1410,6 +1918,8 @@ export default function MapEditor() {
     mode,
     snapCount,
     linkFrom,
+    childParent,
+    orphans,
     data.campus.features.length,
     data.buildings.features.length,
     data.checkpoints.features.length,
@@ -1471,6 +1981,157 @@ export default function MapEditor() {
         >
           {dim ? "背景を戻す" : "背景を暗く"}
         </button>
+
+        {/* 地図の向き。傾いた建物をなぞるとき、正対させると角が打ちやすい */}
+        <span className="mx-1 inline-block h-4 w-px align-middle bg-slate-300" />
+        <button
+          onClick={() => rotateBy(-15)}
+          title="反時計回りに15度"
+          className="rounded px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        >
+          ↺
+        </button>
+        <button
+          onClick={() => rotateBy(15)}
+          title="時計回りに15度"
+          className="rounded px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        >
+          ↻
+        </button>
+        <button
+          onClick={resetNorth}
+          title="北を上に戻す"
+          className={`rounded px-2 py-1.5 text-xs font-medium transition ${
+            Math.round(bearing) !== 0
+              ? "bg-slate-900 text-white"
+              : "text-slate-400 hover:bg-slate-100"
+          }`}
+        >
+          北{Math.round(bearing) !== 0 && ` (${Math.round(bearing)}°)`}
+        </button>
+
+        {/* ラベルは密になると重なって作業の邪魔になるので個別に消せるようにする */}
+        <span className="mx-1 inline-block h-4 w-px align-middle bg-slate-300" />
+        <button
+          onClick={() => setShowBuildingLabels((v) => !v)}
+          title="建物名の表示を切り替える"
+          className={`rounded px-2.5 py-1.5 text-xs font-medium transition ${
+            showBuildingLabels
+              ? "bg-slate-900 text-white"
+              : "text-slate-400 line-through hover:bg-slate-100"
+          }`}
+        >
+          建物名
+        </button>
+        <button
+          onClick={() => setShowCpLabels((v) => !v)}
+          title="チェックポイント名の表示を切り替える"
+          className={`rounded px-2.5 py-1.5 text-xs font-medium transition ${
+            showCpLabels
+              ? "bg-green-600 text-white"
+              : "text-slate-400 line-through hover:bg-slate-100"
+          }`}
+        >
+          CP名
+        </button>
+      </div>
+
+      {/* CPと接続を地図の上に直接描く。MapLibre のレイヤに依存しない */}
+      {overlay && (
+        <svg
+          className="pointer-events-none absolute inset-0"
+          style={{ zIndex: 5 }}
+          width="100%"
+          height="100%"
+        >
+          {/* 親子関係。通らないと入れない道すじ */}
+          {overlay.hier.map(({ a, b, key }) => (
+            <line
+              key={key}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+              stroke="#7c3aed"
+              strokeWidth={2.5}
+              strokeDasharray="4 3"
+            />
+          ))}
+
+          {/* 接続。案内が通る区間。濃紺の縁取りを下に敷いて写真の上でも見えるようにする */}
+          {overlay.lines.map(({ l, a, b }) => {
+            const k = pathKindOf(l.kind);
+            const w = k.width + 2.5;
+            return (
+              <g key={l.id}>
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke="#0f172a"
+                  strokeWidth={w + 4}
+                  strokeLinecap="round"
+                  opacity={0.9}
+                />
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke={
+                    l.id === selected ? "#f97316" : !l.enabled ? "#94a3b8" : k.color
+                  }
+                  strokeWidth={w}
+                  strokeLinecap="round"
+                  strokeDasharray={l.enabled ? undefined : "6 4"}
+                />
+              </g>
+            );
+          })}
+
+          {/* チェックポイント */}
+          {overlay.cps.map((c) => {
+            const p = overlay.pos.get(c.properties.id);
+            if (!p) return null;
+            const k = checkpointKindOf(c.properties.kind);
+            const on = c.properties.id === selected || c.properties.id === linkFrom;
+            return (
+              <circle
+                key={c.properties.id}
+                cx={p.x}
+                cy={p.y}
+                r={on ? 9 : c.properties.level === 1 ? 6 : 4.5}
+                fill={on ? "#ea580c" : k.color}
+                stroke={on ? "#ea580c" : c.properties.level === 1 ? "#ffffff" : "#7c3aed"}
+                strokeWidth={2.5}
+              />
+            );
+          })}
+        </svg>
+      )}
+
+      {/* 作図の進み具合。地図を見たまま数で確認できるようにする */}
+      <div className="absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-full bg-slate-900/90 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg">
+        場所 {data.buildings.features.length}
+        <span className="mx-1.5 opacity-40">|</span>
+        CP {data.checkpoints.features.length}
+        <span className="mx-1.5 opacity-40">|</span>
+        <span className={data.links.length > 0 ? "text-sky-300" : "text-slate-400"}>
+          接続 {data.links.length}
+        </span>
+        {data.links.length > 0 && (
+          <>
+            <span className="mx-1.5 opacity-40">|</span>
+            {graph.unreachable.length + graph.isolated.length > 0 ? (
+              <span className="text-red-300">
+                未接続 {graph.unreachable.length + graph.isolated.length}
+              </span>
+            ) : (
+              <span className="text-emerald-300">全部つながっています</span>
+            )}
+          </>
+        )}
       </div>
 
       {/* 凡例。地図の色が何を表すか、地図を見たまま分かるようにする */}
@@ -1550,6 +2211,21 @@ export default function MapEditor() {
               >
                 CPを置く
               </button>
+              {/* 編集パネルの奥に隠れると見つからないので、ここにも出す */}
+              <button
+                onClick={() => {
+                  if (!selectedCp) return;
+                  setChildParent(selectedCp.properties.id);
+                  setMode("child");
+                }}
+                disabled={!selectedCp}
+                className="col-span-2 rounded bg-violet-600 px-2 py-2 text-xs font-bold text-white hover:bg-violet-700 disabled:bg-slate-400"
+                title="選んだCPを通らないと入れない場所を置きます"
+              >
+                {selectedCp
+                  ? `${selectedCp.properties.id} の先の場所を置く（レベル ${selectedCp.properties.level + 1}）`
+                  : "先の場所を置く ← 先にCPを選んでください"}
+              </button>
               <button
                 onClick={() => {
                   setLinkFrom(null);
@@ -1569,7 +2245,11 @@ export default function MapEditor() {
               <div className="text-xs font-bold text-slate-900">
                 {mode === "checkpoint"
                   ? "チェックポイントを設置中"
-                  : `${MODE_LABEL[mode]}を作図中 — 頂点 ${draft.length}`}
+                  : mode === "child"
+                    ? `${childParent} の先の場所を設置中`
+                    : mode === "link"
+                      ? "接続中"
+                      : `${MODE_LABEL[mode]}を作図中 — 頂点 ${draft.length}`}
               </div>
               {mode === "link" ? (
                 <>
@@ -1601,11 +2281,27 @@ export default function MapEditor() {
                     </button>
                   </div>
                 </>
+              ) : mode === "child" ? (
+                <>
+                  <p className="rounded bg-violet-100 p-1.5 text-[10px] leading-relaxed text-violet-900">
+                    <b>{childParent}</b> の先の場所を置きます。
+                    地図をクリックするたびに1つ置かれ、
+                    <b>{childParent} を通らないと入れない</b>場所になります。
+                    続けてクリックすれば複数置けます。
+                  </p>
+                  <button
+                    onClick={cancel}
+                    className="rounded bg-slate-900 px-2 py-1.5 text-xs font-bold text-white"
+                  >
+                    設置を終える (Esc)
+                  </button>
+                </>
               ) : mode === "checkpoint" ? (
                 <>
                   <p className="text-[10px] leading-relaxed text-slate-600">
-                    地図をクリックするたびに1つ置かれます。通路の頂点の{SNAP_METERS}m以内なら
-                    自動で吸着します。置いた直後に下の欄で名前と対象を設定できます。
+                    地図をクリックするたびに1つ置かれます。これは<b>外から入れる点（レベル1）</b>です。
+                    建物の中など「ここを通らないと入れない場所」は、置いたあと
+                    <b>[この先の場所を置く]</b> で追加します。
                   </p>
                   <button
                     onClick={cancel}
@@ -1642,8 +2338,36 @@ export default function MapEditor() {
           )}
         </div>
 
+        {/* タブ。建物一覧で埋まってCPが見えなくなるのを防ぐ */}
+        <div className="grid grid-cols-3 gap-1 rounded-md bg-slate-200 p-1">
+          {(
+            [
+              ["places", "場所", data.buildings.features.length],
+              ["route", "CP・経路", data.checkpoints.features.length],
+              ["io", "入出力", null],
+            ] as const
+          ).map(([id, label, count]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`rounded px-1 py-1.5 text-[11px] font-bold transition ${
+                tab === id
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {label}
+              {count !== null && (
+                <span className="ml-1 font-normal text-slate-500">{count}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* 基盤地図情報の取り込み */}
-        <section className="rounded-md bg-indigo-50 p-2 ring-1 ring-indigo-200">
+        <section
+          className={`rounded-md bg-indigo-50 p-2 ring-1 ring-indigo-200 ${tab === "io" ? "" : "hidden"}`}
+        >
           <h2 className="text-xs font-bold text-slate-900">基盤地図情報から取り込む</h2>
           <p className="mt-1 text-[10px] leading-relaxed text-slate-600">
             国土地理院の建築物データ（XML）を読み込み、
@@ -1708,7 +2432,7 @@ export default function MapEditor() {
         )}
 
         {/* 敷地 */}
-        <section>
+        <section className={tab === "places" ? "" : "hidden"}>
           <h2 className="mb-1 text-xs font-bold text-slate-900">
             敷地（{data.campus.features.length}）
           </h2>
@@ -1737,7 +2461,7 @@ export default function MapEditor() {
         </section>
 
         {/* 建物 */}
-        <section className="flex-1">
+        <section className={`flex-1 ${tab === "places" ? "" : "hidden"}`}>
           <h2 className="mb-1 text-xs font-bold text-slate-900">
             場所（{data.buildings.features.length}）
             <span className="ml-1 font-normal text-slate-500">名称 入力済 {named}</span>
@@ -1801,8 +2525,8 @@ export default function MapEditor() {
           )}
         </section>
 
-        {/* 通路 */}
-        <section>
+        {/* 通路（参考線） */}
+        <section className={tab === "route" ? "" : "hidden"}>
           <h2 className="mb-1 text-xs font-bold text-slate-900">
             参考線（{data.paths.features.length}）
             <span className="ml-1 font-normal text-slate-500">
@@ -1972,7 +2696,7 @@ export default function MapEditor() {
         )}
 
         {/* チェックポイント */}
-        <section>
+        <section className={tab === "route" ? "" : "hidden"}>
           <h2 className="mb-1 text-xs font-bold text-slate-900">
             チェックポイント（{data.checkpoints.features.length}）
           </h2>
@@ -1990,6 +2714,13 @@ export default function MapEditor() {
                   出入口にCPを置いて「到着とみなす場所」に紐づけてください。
                 </div>
               )}
+              {orphans.length > 0 && (
+                <div className="mb-1.5 rounded bg-red-50 p-1.5 text-[10px] leading-relaxed text-red-800 ring-1 ring-red-300">
+                  <b>入口が設定されていないCPが {orphans.length} 件</b>あります
+                  （{orphans.map((o) => o.properties.id).slice(0, 6).join(" / ")}）。
+                  レベル2以上なのに親が無いため、<b>どこからも入れません。</b>
+                </div>
+              )}
               <ul className="space-y-1">
                 {(data.checkpoints.features as CheckpointFeature[]).map((f) => {
                   const k = checkpointKindOf(f.properties.kind);
@@ -1999,7 +2730,8 @@ export default function MapEditor() {
                   return (
                     <li key={f.properties.id}>
                       <button
-                        onClick={() => setSelected(f.properties.id)}
+                        onClick={() => flyToCp(f)}
+                        title="クリックすると地図がその位置へ移動します"
                         className={`w-full rounded px-2 py-1 text-left text-[11px] ring-1 transition ${
                           selected === f.properties.id
                             ? "bg-orange-100 ring-orange-400"
@@ -2011,7 +2743,12 @@ export default function MapEditor() {
                           style={{ backgroundColor: k.color }}
                         />
                         <span className="font-mono text-slate-500">{f.properties.id}</span>
-                        <span className="ml-2 text-slate-900">
+                        {f.properties.level > 1 && (
+                          <span className="ml-1 rounded bg-violet-100 px-1 text-[9px] font-bold text-violet-800">
+                            Lv{f.properties.level}
+                          </span>
+                        )}
+                        <span className="ml-1.5 text-slate-900">
                           {f.properties.name || k.label}
                         </span>
                         <span className="ml-1 text-slate-500">{f.properties.radius}m</span>
@@ -2030,7 +2767,7 @@ export default function MapEditor() {
         </section>
 
         {/* 接続（経路グラフ） */}
-        <section>
+        <section className={tab === "route" ? "" : "hidden"}>
           <h2 className="mb-1 text-xs font-bold text-slate-900">
             接続（{data.links.length}）
             <span className="ml-1 font-normal text-slate-500">
@@ -2186,9 +2923,22 @@ export default function MapEditor() {
         {/* 選択中のチェックポイントの編集 */}
         {selectedCp && (
           <section className="rounded-md bg-green-50 p-2 ring-1 ring-green-300">
-            <h3 className="mb-2 text-xs font-bold text-slate-900">
+            <h3 className="mb-1 text-xs font-bold text-slate-900">
               {selectedCp.properties.id} を編集
             </h3>
+            {/* どこに置いたかを数値でも確かめられるようにする */}
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <code className="text-[10px] text-slate-600">
+                {selectedCp.geometry.coordinates[1].toFixed(6)},{" "}
+                {selectedCp.geometry.coordinates[0].toFixed(6)}
+              </code>
+              <button
+                onClick={() => flyToCp(selectedCp)}
+                className="shrink-0 rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-800 hover:bg-slate-300"
+              >
+                この位置へ移動
+              </button>
+            </div>
             <div className="space-y-1.5">
               <div className="text-[11px] text-slate-700">
                 種類
@@ -2261,6 +3011,109 @@ export default function MapEditor() {
                   GPSの誤差は屋外でも 5〜15m 出ます。狭すぎると到着と判定されません。
                 </span>
               </label>
+
+              {/* 階層。親を通らないと子に入れない構造を作る */}
+              <div className="rounded bg-white p-2 ring-1 ring-slate-300">
+                <h4 className="text-[11px] font-bold text-slate-900">
+                  階層：レベル {selectedCp.properties.level}
+                  {selectedCp.properties.level === 1 && (
+                    <span className="ml-1 font-normal text-slate-600">外から入れる</span>
+                  )}
+                </h4>
+
+                {/* 親。どれか1つを通れば入れる（OR） */}
+                {selectedCp.properties.level >= 2 && (
+                  <div className="mt-1.5">
+                    <p className="text-[10px] text-slate-700">
+                      ここに入るには、下のうち<b>どれか1つ</b>を通る必要があります
+                    </p>
+                    {selectedCp.properties.parents.length === 0 ? (
+                      <p className="mt-0.5 rounded bg-red-50 p-1 text-[10px] font-bold text-red-800 ring-1 ring-red-300">
+                        親が未設定です。このままではどこからも入れません。
+                      </p>
+                    ) : (
+                      <ul className="mt-0.5 space-y-0.5">
+                        {selectedCp.properties.parents.map((pid) => {
+                          const p = cpById.get(pid);
+                          return (
+                            <li key={pid} className="flex items-center gap-1">
+                              <button
+                                onClick={() => p && flyToCp(p)}
+                                className="min-w-0 flex-1 truncate rounded bg-slate-100 px-1.5 py-0.5 text-left text-[10px] hover:bg-slate-200"
+                              >
+                                <span className="font-mono text-slate-500">{pid}</span>
+                                <span className="ml-1">{p?.properties.name || ""}</span>
+                              </button>
+                              <button
+                                onClick={() => removeParent(selectedCp.properties.id, pid)}
+                                title="この親を外す"
+                                className="shrink-0 px-1 text-[11px] font-bold text-red-600 hover:text-red-800"
+                              >
+                                ×
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    <select
+                      value=""
+                      onChange={(e) => addParent(selectedCp.properties.id, e.target.value)}
+                      className="mt-1 w-full rounded border border-slate-300 px-1 py-0.5 text-[10px]"
+                    >
+                      <option value="">＋ 入口を追加（別の入口からも入れる場合）</option>
+                      {allCps
+                        .filter(
+                          (c) =>
+                            c.properties.id !== selectedCp.properties.id &&
+                            !selectedCp.properties.parents.includes(c.properties.id) &&
+                            c.properties.level < selectedCp.properties.level,
+                        )
+                        .map((c) => (
+                          <option key={c.properties.id} value={c.properties.id}>
+                            {c.properties.id} {c.properties.name || ""}（Lv{c.properties.level}）
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 子。ここを通らないと入れない場所 */}
+                <div className="mt-2">
+                  <p className="text-[10px] text-slate-700">
+                    この先の場所（{childrenOfSelected.length}）
+                  </p>
+                  {childrenOfSelected.length > 0 && (
+                    <ul className="mt-0.5 space-y-0.5">
+                      {childrenOfSelected.map((c) => (
+                        <li key={c.properties.id}>
+                          <button
+                            onClick={() => flyToCp(c)}
+                            className="w-full truncate rounded bg-violet-50 px-1.5 py-0.5 text-left text-[10px] ring-1 ring-violet-200 hover:bg-violet-100"
+                          >
+                            <span className="font-mono text-slate-500">{c.properties.id}</span>
+                            <span className="ml-1">{c.properties.name || "（名称未入力）"}</span>
+                            <span className="ml-1 text-slate-500">
+                              Lv{c.properties.level}
+                              {c.properties.parents.length > 1 &&
+                                ` / 入口${c.properties.parents.length}`}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button
+                    onClick={() => {
+                      setChildParent(selectedCp.properties.id);
+                      setMode("child");
+                    }}
+                    className="mt-1 w-full rounded bg-violet-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-violet-700"
+                  >
+                    ＋ この先の場所を置く（レベル {selectedCp.properties.level + 1}）
+                  </button>
+                </div>
+              </div>
 
               <button
                 onClick={() => removeCp(selectedCp.properties.id)}
@@ -2470,7 +3323,9 @@ export default function MapEditor() {
         )}
 
         {/* 入出力 */}
-        <section className="border-t border-slate-200 pt-2">
+        <section
+          className={`border-t border-slate-200 pt-2 ${tab === "io" ? "" : "hidden"}`}
+        >
           <h2 className="mb-1.5 text-xs font-bold text-slate-900">書き出し / 読み込み</h2>
           <div className="grid grid-cols-2 gap-1.5">
             <button

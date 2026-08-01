@@ -222,9 +222,40 @@ export type CheckpointProps = {
   /** この距離（m）以内に入ったら到着とみなす */
   radius: number;
   note: string;
+
+  /**
+   * 階層の深さ。
+   * 1 = 外から直接入れる（門・建物の入口・屋外の分岐点）
+   * 2以上 = 親を通らないと入れない（建物の中など）
+   */
+  level: number;
+
+  /**
+   * 親のチェックポイントID。
+   *
+   * **このうち「どれか1つ」を通れば入れる（OR条件）。**
+   * 例：23号館に南口と北口があるなら、中の場所の親は2つ。
+   *     どちらの入口から入っても到達できる。
+   *
+   * level 1 では空。level 2以上で空だと、どこからも入れない状態になる。
+   */
+  parents: string[];
 };
 
 export type CheckpointFeature = Feature<Point, CheckpointProps>;
+
+/** 指定したチェックポイントを親に持つもの（直下の子だけ） */
+export function childrenOf(cps: CheckpointFeature[], id: string): CheckpointFeature[] {
+  return cps.filter((c) => c.properties.parents.includes(id));
+}
+
+/**
+ * 親を1つも持たない level 2以上のチェックポイント。
+ * どこからも入れないので、経路が出せない。
+ */
+export function orphanCheckpoints(cps: CheckpointFeature[]): CheckpointFeature[] {
+  return cps.filter((c) => c.properties.level >= 2 && c.properties.parents.length === 0);
+}
 
 /* ---------------- 部屋（建物の中身） ---------------- */
 
@@ -377,7 +408,18 @@ function migrate(data: MapData): MapData {
         properties: { ...f.properties, enabled: f.properties.enabled ?? true },
       })),
     },
-    checkpoints: data.checkpoints ?? { type: "FeatureCollection", features: [] },
+    checkpoints: {
+      type: "FeatureCollection",
+      features: (data.checkpoints?.features ?? []).map((f) => ({
+        ...f,
+        // level / parents は後から追加。既存のCPは「外から入れる」= level 1 とする
+        properties: {
+          ...f.properties,
+          level: f.properties.level ?? 1,
+          parents: f.properties.parents ?? [],
+        },
+      })),
+    },
     links: data.links ?? [],
     rooms: data.rooms ?? [],
     buildings: {
