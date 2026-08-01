@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP",
+    Meiryo,
+    sans-serif;
+}
+
+/* MapLibre の出典表示を少し小さくして地図を広く使う */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
