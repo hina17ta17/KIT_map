@@ -3822,6 +3822,162 @@
         "note": "",
         "lengthM": 62
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.627432635196,
+            36.52768257730351
+          ],
+          [
+            136.62686954086064,
+            36.52769874791858
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-148",
+        "from": "C-29",
+        "to": "C-28",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 50
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62686954086064,
+            36.52769874791858
+          ],
+          [
+            136.6273454754512,
+            36.5281860558197
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-149",
+        "from": "C-28",
+        "to": "C-32",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 69
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62900922861758,
+            36.531541192212956
+          ],
+          [
+            136.6292888483726,
+            36.531618368962214
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-150",
+        "from": "C-66",
+        "to": "C-40",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 26
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6292888483726,
+            36.531618368962214
+          ],
+          [
+            136.62928607551243,
+            36.53204223187453
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-151",
+        "from": "C-40",
+        "to": "C-49",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 47
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.62928607551243,
+            36.53204223187453
+          ],
+          [
+            136.6292903138509,
+            36.532212512047735
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-152",
+        "from": "C-49",
+        "to": "C-48",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 19
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            136.6292903138509,
+            36.532212512047735
+          ],
+          [
+            136.62947810626167,
+            36.53257034395969
+          ]
+        ]
+      },
+      "properties": {
+        "id": "L-153",
+        "from": "C-48",
+        "to": "C-47",
+        "kind": "normal",
+        "roofed": false,
+        "enabled": true,
+        "note": "",
+        "lengthM": 43
+      }
     }
   ]
 }
