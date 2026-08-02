@@ -42,13 +42,12 @@ const HOME_ZOOM = 17;
 const FAV_KEY = "kitmap.favorites";
 
 /**
- * 起動時に画面へ収める場所。
+ * 起動時に画面へ収めるときの余白（画面上の点）。
  *
- * 地図の中心と画面の中心は一致しない。上にボタン、下に一覧の帯が
- * 重なっているぶん、中心を置いただけでは真ん中に見えない。
- * この二つを枠に収めるよう指示して、確実に間へ入れる。
+ * 地図の中心と画面の中心は一致しない。上にボタンの列、下に建物一覧の帯が
+ * 重なっているので、そのぶんを空けた内側に収める。
  */
-const HOME_FRAME = ["1号館", "金沢工業大学前バス停"];
+const HOME_PAD = { top: 140, bottom: 80, left: 24, right: 24 };
 
 /** 画面の上での名前の置き場所。左上を起点にした四角 */
 type LabelBox = { x: number; y: number; w: number; h: number };
@@ -556,20 +555,23 @@ export default function Guide() {
   }, [fix]);
 
   /**
-   * 起動したら、1号館と金沢工業大学前バス停の両方が入るように枠を合わせる。
+   * 起動したら、構内の建物がひととおり入るところまで引く。
+   *
+   * 構内から離れた場所（野々市工大前駅など）は枠に入れない。
+   * 駅は構内の西へ367m 離れており、含めると画角が大きく崩れて
+   * 構内の建物が小さくなってしまう。
    *
    * 一度だけ。現在地が取れたり案内を始めたりしたら、そちらを優先する。
-   * 上下に重なるボタンと帯のぶんだけ余白を取り、その内側の真ん中に入れる。
    */
   const framed = useRef(false);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !data || framed.current || fix || trip) return;
 
-    const rings = HOME_FRAME.map(
-      (n) => data.buildings.features.find((f) => f.properties.name === n)?.geometry.coordinates[0],
-    ).filter(Boolean) as Position[][];
-    if (rings.length < HOME_FRAME.length) return; // 片方でも無ければ触らない
+    const rings = data.buildings.features
+      .filter((f) => !ZOOM_ONLY_NAMES.has(f.properties.name ?? ""))
+      .map((f) => f.geometry.coordinates[0]);
+    if (rings.length === 0) return;
 
     framed.current = true;
     let w = Infinity,
@@ -589,8 +591,7 @@ export default function Guide() {
         [w, s],
         [e, n],
       ],
-      // 上はボタン、下は建物一覧の帯。その内側の真ん中に来るようにする
-      { padding: { top: 150, bottom: 130, left: 60, right: 60 }, maxZoom: 18, duration: 0 },
+      { padding: HOME_PAD, maxZoom: 17, duration: 0 },
     );
   }, [ready, data, fix, trip]);
 
