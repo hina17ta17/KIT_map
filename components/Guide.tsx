@@ -672,7 +672,11 @@ export default function Guide() {
   /* ---------------- 到着判定 ---------------- */
 
   useEffect(() => {
-    if (!route || "error" in route || !fix || trip?.origin.kind !== "me") {
+    // 出発地がどこであっても、目的地に着いたら知らせる。
+    // 以前は現在地から始めた案内のときだけ見ていたので、
+    // 地図のラベルや検索で出発地を指定した案内では到着が出なかった。
+    // 判定に使うのは現在地なので、現在地が取れてさえいれば同じように分かる。
+    if (!route || "error" in route || !fix) {
       inRangeSince.current = null;
       return;
     }
@@ -1583,10 +1587,21 @@ export default function Guide() {
             <p className="mt-1 text-lg font-bold leading-snug text-slate-900">
               {trip.dest.title}
             </p>
-            {trip.dest.sub && (
-              <p className="mt-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800">
-                {trip.dest.title.split(" ").pop()} は {trip.dest.sub}です
-              </p>
+
+            {/* 建物の前まで来ただけなので、中の何階かをここで大きく伝える。
+                案内はここで終わりで、あとは階を頼りに進んでもらう */}
+            {trip.dest.sub ? (
+              <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-3">
+                <p className="text-[10px] font-bold tracking-widest text-emerald-700">
+                  建物の中では
+                </p>
+                <p className="mt-0.5 text-2xl font-bold text-emerald-900">{trip.dest.sub}</p>
+                <p className="mt-0.5 text-[11px] text-emerald-700">
+                  ここから中に入って、この階へ向かってください
+                </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-[11px] text-slate-500">建物の前に着きました</p>
             )}
             <button
               onClick={() => {
@@ -1698,10 +1713,12 @@ export default function Guide() {
             </button>
           </div>
 
-          {/* 目的地の階だけ、到着後の迷いを防ぐために添える */}
+          {/* 目的地の階は、着く前から見えるようにしておく。
+              建物の前で初めて知るより、道中で分かっていたほうが動きやすい */}
           {trip.dest.sub && (
-            <div className="mt-1.5 w-fit rounded-full bg-slate-900/85 px-3 py-1 text-[11px] font-bold text-white shadow backdrop-blur">
-              {trip.dest.title.split(" ").pop()} は {trip.dest.sub}
+            <div className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white shadow">
+              <span className="opacity-80">建物の中では</span>
+              <span className="text-[13px]">{trip.dest.sub}</span>
             </div>
           )}
 
