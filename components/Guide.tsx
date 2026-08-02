@@ -11,7 +11,7 @@
  * 建物の判別は検索と、選択中のハイライトで行う。
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Map as MlMap, NavigationControl, ScaleControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
@@ -38,26 +38,6 @@ const SHORT_ROLE: Record<Role, string> = {
   admin_l2: "管理者Lv2",
   admin_l3: "管理者Lv3",
 };
-
-/**
- * 描く前に動かしたい処理。
- *
- * サーバ側には画面が無いので useLayoutEffect は使えない。
- * そのまま書くと警告が出るため、サーバでは useEffect に差し替える。
- */
-const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-/**
- * 通信せずにログイン済みかを見分ける。
- *
- * ログイン状態は `sb-<プロジェクト>-auth-token` という名前で Cookie に入る。
- * 中身は読まない。有無だけで、タイトル画面を出すかどうかを決める。
- * 本当に入れているかは、あとから通信で確かめる。
- */
-function hasSessionCookie(): boolean {
-  if (typeof document === "undefined") return false;
-  return /(?:^|;\s*)sb-[^=;]*auth-token[^=;]*=/.test(document.cookie);
-}
 
 type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
@@ -89,16 +69,6 @@ export default function Guide() {
       window.setTimeout(() => setSplash("done"), 400);
       return "closing";
     });
-  }, []);
-
-  /**
-   * ログイン済みなら、タイトル画面を出さずに地図から始める。
-   *
-   * 毎回見せられるのは、入り直すたびに待たされるのと同じ。
-   * 描く前に決めるので、一瞬ちらつくこともない。
-   */
-  useBeforePaint(() => {
-    if (hasSessionCookie()) setSplash("done");
   }, []);
 
   /** 少し見せてから自動で開く。触れば即座に開く */
