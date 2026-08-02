@@ -30,6 +30,33 @@ const SNAP_MAX = 50;
 /** 起動時の縮尺。建物を押して寄ったあと、ここへ戻す */
 const HOME_ZOOM = 17;
 
+/** 画面の上での名前の置き場所。左上を起点にした四角 */
+type LabelBox = { x: number; y: number; w: number; h: number };
+
+/**
+ * 名前がどれだけの場所を取るかの見積もり。
+ *
+ * 本当の幅は描いてみないと分からないが、毎回測ると描き直しが増える。
+ * 11px の太字なら、全角はほぼ文字の高さ分、半角はその6割ほどの幅になる。
+ * 左右の余白 16px を足したものを、その名前の占める幅とみなす。
+ */
+function labelBox(text: string, x: number, y: number): LabelBox {
+  let w = 16;
+  for (const ch of text) w += /[ -~｡-ﾟ]/.test(ch) ? 6.6 : 11;
+  const h = 19;
+  return { x: x - w / 2, y: y - h / 2, w, h };
+}
+
+/** 二つの名前がぶつかるか。詰まって見えないよう少し隙間を見込む */
+function overlaps(a: LabelBox, b: LabelBox, gap = 3): boolean {
+  return (
+    a.x < b.x + b.w + gap &&
+    b.x < a.x + a.w + gap &&
+    a.y < b.y + b.h + gap &&
+    b.y < a.y + a.h + gap
+  );
+}
+
 /** 右上の狭い場所に出す用の、短い権限名 */
 const SHORT_ROLE: Record<Role, string> = {
   pending: "承認待ち",
@@ -498,6 +525,28 @@ export default function Guide() {
     return s;
   }, [trip, focusId]);
 
+  /**
+   * 建物の広さ。名前をどれから先に置くかを決めるためだけに使う。
+   *
+   * 経緯度のまま計算するので実際の面積ではないが、
+   * 大小の順さえ合っていればよい。動かすたびに計算し直さないよう一度だけ求める。
+   */
+  const areaOf = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!data) return m;
+    for (const f of data.buildings.features) {
+      const ring = f.geometry.coordinates[0];
+      let s = 0;
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i];
+        const b = ring[(i + 1) % ring.length];
+        s += a[0] * b[1] - b[0] * a[1];
+      }
+      m.set(f.properties.tempId, Math.abs(s) / 2);
+    }
+    return m;
+  }, [data]);
+
   /** 一覧に出す建物。号館を番号順、そのあと屋外・施設を指定の順で並べる */
   const listed = useMemo(() => {
     if (!data) return [];
@@ -569,13 +618,48 @@ export default function Guide() {
       const q = map.project([c[0], c[1]]);
       return { x: q.x, y: q.y };
     };
-    return {
-      // 建物は枠線を描かず、名前だけ地図に置く。
-      // 形のデータは検索と経路に使うので、画面に出さないだけ。
-      buildings: data.buildings.features.map((f) => ({
+    /*
+     * 建物は枠線を描かず、名前だけ地図に置く。
+     * 形のデータは検索と経路に使うので、画面に出さないだけ。
+     *
+     * 縮尺を下げると、離れた建物の名前どうしが画面の上で重なって読めなくなる。
+     * そこで大事なものから順に場所を取っていき、すでに置いた名前と
+     * ぶつかるものは出さない。出せなかった名前は、拡大すれば場所が空いて出てくる。
+     */
+    const canvas = map.getContainer();
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+
+    const taken: LabelBox[] = [];
+    const buildings: { f: (typeof data.buildings.features)[number]; c: { x: number; y: number } }[] =
+      [];
+
+    const cands = data.buildings.features
+      .map((f) => ({
         f,
         c: p(centroid(f.geometry.coordinates[0])),
-      })),
+        text: f.properties.name || f.properties.code || "",
+      }))
+      // 画面の外は判定にも描画にも要らない。少しはみ出す分だけ余裕を持たせる
+      .filter((x) => x.text && x.c.x > -80 && x.c.y > -40 && x.c.x < W + 80 && x.c.y < H + 40)
+      .sort((a, b) => {
+        // 選んでいる建物と経路の両端は、何を押したか分からなくなるので必ず出す
+        const ah = highlight.has(a.f.properties.tempId) ? 1 : 0;
+        const bh = highlight.has(b.f.properties.tempId) ? 1 : 0;
+        if (ah !== bh) return bh - ah;
+        // あとは大きい建物から。小さな小屋より号館の方が目印になる
+        return (areaOf.get(b.f.properties.tempId) ?? 0) - (areaOf.get(a.f.properties.tempId) ?? 0);
+      });
+
+    for (const x of cands) {
+      const r = labelBox(x.text, x.c.x, x.c.y);
+      if (taken.some((t) => overlaps(t, r))) continue;
+      taken.push(r);
+      buildings.push({ f: x.f, c: x.c });
+    }
+
+    return {
+      buildings,
       routePts: route && !("error" in route) ? route.path.map((id) => p(graph!.pos.get(id)!)) : [],
       goal: route && !("error" in route) ? p(route.goal.geometry.coordinates) : null,
       start:
@@ -583,7 +667,7 @@ export default function Guide() {
       me: fix ? p(fix.pos) : null,
       meR: fix ? radiusPx(map, fix.pos, fix.accuracy) : 0,
     };
-  }, [ready, data, tick, route, graph, fix]);
+  }, [ready, data, tick, route, graph, fix, highlight, areaOf]);
 
   /* ---------------- 表示 ---------------- */
 
@@ -1106,15 +1190,16 @@ export default function Guide() {
                     : "計算中…"}
               </div>
             </div>
+            {/* 「✕」だけでは何が消えるのか分からないので、言葉で書く */}
             <button
               onClick={() => {
                 setTrip(null);
                 setArrived(false);
+                setFocusId(null);
               }}
-              aria-label="案内を終える"
-              className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-200"
+              className="shrink-0 rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-95"
             >
-              ✕
+              案内を消す
             </button>
           </div>
 
