@@ -14,7 +14,7 @@ import { ROLE_LABEL, canManage, type Role } from "@/lib/auth";
 
 type Row = { id: string; email: string; role: Role; created_at: string };
 
-const ROLES: Role[] = ["pending", "student", "admin_l1", "admin_l2", "admin_l3"];
+const ROLES: Role[] = ["pending", "student", "admin_l0", "admin_l1", "admin_l2", "admin_l3"];
 
 export default function AdminPage() {
   const [myRole, setMyRole] = useState<Role | null>(null);
@@ -112,6 +112,7 @@ export default function AdminPage() {
         <div className="flex gap-3 text-xs font-semibold text-slate-500">
           <Link href="/admin/rooms" className="hover:text-slate-800">教室の登録</Link>
           <Link href="/admin/schedule" className="hover:text-slate-800">予定の登録</Link>
+          <Link href="/admin/cafeteria" className="hover:text-slate-800">食堂</Link>
           <Link href="/" className="hover:text-slate-800">地図へ</Link>
         </div>
       </div>

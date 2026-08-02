@@ -42,6 +42,19 @@ type Conflict = {
   ends_at: string;
 };
 
+/** その日にすでに入っている予定 */
+type Booked = {
+  id: number;
+  kind: Kind;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  teacher: string;
+  rooms: { building_code: string; code: string; name: string } | null;
+  courses: { name: string; class_name: string } | null;
+  club_activities: { name: string } | null;
+};
+
 /** register_slots（まとめて登録）の返り値 */
 type BatchResult = {
   registered: { room_id: number }[];
@@ -111,6 +124,12 @@ export default function SchedulePage() {
   const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
   /** 消してよいか尋ねている最中の教室と、その相手 */
   const [pending, setPending] = useState<{ room: Room; conflicts: Conflict[] }[] | null>(null);
+  /** その日にすでに入っている予定 */
+  const [booked, setBooked] = useState<Booked[]>([]);
+  /** 消す前に一度確かめる。押し間違いで消えないように */
+  const [confirmDelete, setConfirmDelete] = useState<Booked | null>(null);
+  /** 登録したあとに一覧を読み直すための合図 */
+  const [bookedTick, setBookedTick] = useState(0);
 
   /* ---------------- 読み込み ---------------- */
 
@@ -307,6 +326,9 @@ export default function SchedulePage() {
           .map((c) => ({ room: byId.get(c.room_id), conflicts: c.will_remove }))
           .filter((x): x is { room: Room; conflicts: Conflict[] } => !!x.room);
 
+        // 入った分は下の一覧にも出したいので、どちらの道でも読み直す
+        if (done > 0) setBookedTick((v) => v + 1);
+
         if (ask.length > 0) {
           setPending(ask);
           if (done > 0) {
@@ -342,6 +364,48 @@ export default function SchedulePage() {
       }
     },
     [kind, chosen, date, periodId, courseId, courseName, className, teacher, deptId, activityId, title, startAt, endAt],
+  );
+
+  /* ---------------- その日の予定を消す ---------------- */
+
+  /**
+   * その日に入っている予定を読む。
+   * 間違えて入れたものを消せるようにするためで、登録の直後にも読み直す。
+   */
+  const loadBooked = useCallback(async () => {
+    if (!supabaseReady) return;
+    const { data } = await createClient()
+      .from("timetable")
+      .select("id, kind, title, starts_at, ends_at, teacher, rooms(building_code, code, name), courses(name, class_name), club_activities(name)")
+      .eq("on_date", date)
+      .order("starts_at");
+    setBooked((data as unknown as Booked[]) ?? []);
+  }, [date]);
+
+  useEffect(() => {
+    void loadBooked();
+  }, [loadBooked, bookedTick]);
+
+  const removeBooked = useCallback(
+    async (b: Booked) => {
+      setMsg(null);
+      const { error } = await createClient().from("timetable").delete().eq("id", b.id);
+      if (error) {
+        setMsg({ kind: "err", text: error.message });
+        return;
+      }
+      // RLS で弾かれると、エラーにならず0件消えることがある。
+      // 読み直して、本当に消えたかで判断する
+      const before = booked.length;
+      await loadBooked();
+      setMsg(
+        before > 0
+          ? { kind: "ok", text: "予定を消しました" }
+          : { kind: "err", text: "消せませんでした。権限が足りない可能性があります" },
+      );
+      setConfirmDelete(null);
+    },
+    [booked.length, loadBooked],
   );
 
   /* ---------------- 表示 ---------------- */
@@ -820,6 +884,92 @@ export default function SchedulePage() {
           同じ強さどうしは、先に入れたものが残ります。
           授業が入っている時間には、イベントも課外活動も登録できません。
         </p>
+
+        {/* ---- この日に入っている予定。間違えて入れたものを消せる ---- */}
+        <div className="border-t border-slate-100 pt-3">
+          <p className="mb-2 text-[11px] font-bold text-slate-500">
+            {date} に入っている予定（{booked.length}件）
+          </p>
+
+          {booked.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500">
+              まだ何も入っていません。
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {booked.map((b) => {
+                const label =
+                  b.kind === "class"
+                    ? `${b.courses?.name ?? "授業"}${b.courses?.class_name ? `（${b.courses.class_name}）` : ""}`
+                    : b.kind === "activity"
+                      ? (b.club_activities?.name ?? "課外活動")
+                      : b.title || "イベント";
+                return (
+                  <li key={b.id} className="rounded-xl bg-slate-50 p-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white ${
+                              b.kind === "class"
+                                ? "bg-slate-800"
+                                : b.kind === "event"
+                                  ? "bg-amber-600"
+                                  : "bg-violet-600"
+                            }`}
+                          >
+                            {KIND_LABEL[b.kind]}
+                          </span>
+                          <span className="truncate text-sm font-bold text-slate-900">{label}</span>
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-600">
+                          {b.rooms?.code ?? "教室未定"}
+                          <span className="ml-2 text-slate-500">
+                            {hhmm(b.starts_at)}〜{hhmm(b.ends_at)}
+                          </span>
+                          {b.teacher && <span className="ml-2 text-slate-500">{b.teacher}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setConfirmDelete(b)}
+                        className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-bold text-red-600 shadow-sm transition hover:bg-red-50"
+                      >
+                        削除
+                      </button>
+                    </div>
+
+                    {/* 押し間違いで消えないよう、一度だけ確かめる */}
+                    {confirmDelete?.id === b.id && (
+                      <div className="mt-2 rounded-lg bg-red-50 p-2.5">
+                        <p className="text-[11px] font-bold text-red-800">
+                          この予定を消しますか？元には戻せません。
+                        </p>
+                        <div className="mt-1.5 flex gap-2">
+                          <button
+                            onClick={() => void removeBooked(b)}
+                            className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-red-700"
+                          >
+                            はい、消す
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(null)}
+                            className="rounded-lg bg-white px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm"
+                          >
+                            やめる
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+            消せるのは、自分で入れたものと管理者Lv3。授業は Lv2 も消せます。
+          </p>
+        </div>
       </div>
     </Shell>
   );

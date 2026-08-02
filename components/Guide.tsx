@@ -62,6 +62,7 @@ function overlaps(a: LabelBox, b: LabelBox, gap = 3): boolean {
 const SHORT_ROLE: Record<Role, string> = {
   pending: "承認待ち",
   student: "学生・教職員",
+  admin_l0: "管理者Lv0",
   admin_l1: "管理者Lv1",
   admin_l2: "管理者Lv2",
   admin_l3: "管理者Lv3",
