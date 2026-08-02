@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { FeatureCollection, Polygon } from "geojson";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabaseReady } from "@/lib/supabase/client";
 import { type Role } from "@/lib/auth";
 import { guessFloor, floorLabel, type BuildingProps } from "@/lib/features";
 
@@ -64,6 +64,10 @@ export default function RoomsPage() {
   }, []);
 
   const load = useCallback(async () => {
+    if (!supabaseReady) {
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {

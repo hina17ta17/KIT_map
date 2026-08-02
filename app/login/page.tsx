@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabaseReady } from "@/lib/supabase/client";
 import {
   ROLE_LABEL,
   checkPassword,
@@ -27,6 +27,7 @@ export default function LoginPage() {
 
   /** すでにログインしていれば自分の状態を出す */
   useEffect(() => {
+    if (!supabaseReady) return;
     const supabase = createClient();
     void supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
@@ -113,7 +114,31 @@ export default function LoginPage() {
           KIT<span className="ml-1.5 font-semibold">map</span>
         </Link>
 
-        {me ? (
+        {!supabaseReady ? (
+          <>
+            <p className="mt-4 rounded-xl bg-red-50 p-3 text-xs leading-relaxed text-red-800">
+              <b>サーバーに接続できません。</b>
+              <br />
+              このサイトには接続先が設定されていないため、ログインと申請を受け付けられません。
+            </p>
+            <p className="mt-3 rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600">
+              管理者の方へ：公開先（Vercel）の Environment Variables に
+              <br />
+              <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code>
+              <br />
+              <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+              <br />
+              を登録し、もう一度デプロイしてください。
+              これらはビルド時に埋め込まれるため、登録しただけでは反映されません。
+            </p>
+            <Link
+              href="/"
+              className="mt-3 block w-full rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-700"
+            >
+              地図へ戻る
+            </Link>
+          </>
+        ) : me ? (
           <>
             <p className="mt-4 text-sm text-slate-700">
               <b>{me.email}</b> でログイン中

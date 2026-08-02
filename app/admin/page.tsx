@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabaseReady } from "@/lib/supabase/client";
 import { ROLE_LABEL, canManage, type Role } from "@/lib/auth";
 
 type Row = { id: string; email: string; role: Role; created_at: string };
@@ -23,6 +23,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!supabaseReady) {
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
@@ -64,6 +68,19 @@ export default function AdminPage() {
   };
 
   if (loading) return <Shell>読み込み中…</Shell>;
+
+  if (!supabaseReady)
+    return (
+      <Shell>
+        <p className="text-sm font-bold text-red-700">サーバーに接続できません。</p>
+        <p className="mt-2 text-xs leading-relaxed text-slate-600">
+          公開先（Vercel）の Environment Variables に
+          <code className="mx-1 font-mono">NEXT_PUBLIC_SUPABASE_URL</code>と
+          <code className="mx-1 font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+          を登録し、もう一度デプロイしてください。
+        </p>
+      </Shell>
+    );
 
   if (!myRole)
     return (
