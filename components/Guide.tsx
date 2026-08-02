@@ -27,6 +27,8 @@ const ACC_TRUST = 20;
 const ACC_ROUGH = 50;
 /** 現在地からこの距離以内に経路の節点が無ければ案内できない */
 const SNAP_MAX = 50;
+/** 起動時の縮尺。建物を押して寄ったあと、ここへ戻す */
+const HOME_ZOOM = 17;
 
 type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
@@ -96,7 +98,7 @@ export default function Guide() {
       map = new MlMap({
         container: boxRef.current,
         center: INITIAL_VIEW.center,
-        zoom: 17,
+        zoom: HOME_ZOOM,
         maxZoom: 21,
         // 既定の出典表示は畳まれて「ⓘ」ボタンになる。
         // ボタンを消したいが出典表示は地理院タイルの利用条件で必須なので、
@@ -500,29 +502,51 @@ export default function Guide() {
       );
   }, [data]);
 
-  /** 一覧から選んだ建物へ寄せる */
-  const focusBuilding = useCallback((ring: Position[], id: string) => {
-    const map = mapRef.current;
-    if (!map) return;
-    setFocusId(id);
-    let w = Infinity,
-      s = Infinity,
-      e = -Infinity,
-      n = -Infinity;
-    for (const [lon, lat] of ring) {
-      if (lon < w) w = lon;
-      if (lon > e) e = lon;
-      if (lat < s) s = lat;
-      if (lat > n) n = lat;
-    }
-    map.fitBounds(
-      [
-        [w, s],
-        [e, n],
-      ],
-      { padding: 120, maxZoom: 19, duration: 700 },
-    );
-  }, []);
+  /**
+   * 建物へ寄せる。押すたびに寄る／戻るが入れ替わる。
+   *
+   * 同じ建物をもう一度押したら、起動したときの見え方へ戻す。
+   * 寄ったあと元に戻す手立てが無いと、指で縮めるしかなくなるため。
+   */
+  const focusBuilding = useCallback(
+    (ring: Position[], id: string) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      if (focusId === id) {
+        setFocusId(null);
+        // 回したり傾けたりしていても、まっすぐな最初の向きへ戻す
+        map.easeTo({
+          center: INITIAL_VIEW.center,
+          zoom: HOME_ZOOM,
+          bearing: 0,
+          pitch: 0,
+          duration: 700,
+        });
+        return;
+      }
+
+      setFocusId(id);
+      let w = Infinity,
+        s = Infinity,
+        e = -Infinity,
+        n = -Infinity;
+      for (const [lon, lat] of ring) {
+        if (lon < w) w = lon;
+        if (lon > e) e = lon;
+        if (lat < s) s = lat;
+        if (lat > n) n = lat;
+      }
+      map.fitBounds(
+        [
+          [w, s],
+          [e, n],
+        ],
+        { padding: 120, maxZoom: 19, duration: 700 },
+      );
+    },
+    [focusId],
+  );
 
   const view = useMemo(() => {
     const map = mapRef.current;
