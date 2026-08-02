@@ -432,16 +432,20 @@ export default function Guide() {
         beginWatch();
       },
       fail,
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12_000 },
+      // 衛星をつかむには時間がいる。初回は特に、電源を入れてすぐだと
+      // 20〜30秒かかることがある。ここを短くすると、衛星を待たずに
+      // Wi-Fi や基地局からの粗い位置に落ちてしまう
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 25_000 },
     );
 
-    // 20秒経っても何も返らないときは、黙らせずに状態を出す
+    // 何も返らないときは、黙らせずに状態を出す。
+    // 上の待ち時間より長くしないと、待っている最中に諦めたことになる
     retryTimer.current = window.setTimeout(() => {
       setFix((cur) => {
         if (!cur) setGeoState("timeout");
         return cur;
       });
-    }, 20_000);
+    }, 32_000);
   }, [fix, accept, startCompass]);
 
   /** 許可の状態を先に調べて、拒否されているなら押す前に伝える */
@@ -1066,12 +1070,25 @@ export default function Guide() {
               <>
                 精度を上げています… ±{Math.round(fix?.accuracy ?? 0)}m
                 <span className="block text-[10px] text-slate-400">
-                  屋外に出て少し待つと精度が上がります
+                  いまは Wi-Fi や基地局からの推定です。
+                  空の見える場所で少し待つと、衛星に切り替わります
                 </span>
               </>
             )}
+            {/* 精度から、衛星で測れているのか電波からの推定なのかを伝える。
+                どの衛星を使ったかはブラウザからは分からないが、
+                この精度なら衛星が効いている、という目安にはなる */}
             {geoState === "on" &&
-              (inCampus === false ? "圏外（キャンパス外）" : `±${Math.round(fix?.accuracy ?? 0)}m`)}
+              (inCampus === false ? (
+                "圏外（キャンパス外）"
+              ) : (
+                <>
+                  ±{Math.round(fix?.accuracy ?? 0)}m
+                  <span className="block text-[10px] text-emerald-600">
+                    衛星で測れています（GPS・みちびき等）
+                  </span>
+                </>
+              ))}
             {geoState === "denied" && (
               <>
                 現在地が拒否されています
