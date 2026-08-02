@@ -46,6 +46,8 @@ export default function Guide() {
     "idle" | "asking" | "on" | "rough" | "denied" | "timeout" | "unavailable" | "insecure"
   >("idle");
   const watchId = useRef<number | null>(null);
+  /** 応答が無いまま黙るのを防ぐための見張り */
+  const retryTimer = useRef<number | null>(null);
 
   /** 起動時のタイトル画面。0.4秒かけて上下に割れる */
   const [splash, setSplash] = useState<"open" | "closing" | "done">("open");
@@ -210,87 +212,133 @@ export default function Guide() {
 
   /* ---------------- 現在地 ---------------- */
 
+  /** 位置を受け取ったときの共通処理 */
+  const accept = useCallback((p: GeolocationPosition) => {
+    const acc = p.coords.accuracy;
+    const now = Date.now();
+    const next: Fix = { pos: [p.coords.longitude, p.coords.latitude], accuracy: acc, at: now };
+    setFix((prev) => {
+      if (!prev) return next;
+      // iOS/Android は最初に基地局やWi-Fiの粗い位置を返し、
+      // 数秒〜十数秒かけて GPS の精度に上がっていく。
+      // より精度の良いものだけ採用する。ただし古い値に居座られないよう、
+      // 15秒経ったら無条件に入れ替える。
+      const stale = now - prev.at > 15_000;
+      return acc <= prev.accuracy || stale ? next : prev;
+    });
+    // 粗いあいだも位置は出す（円で誤差を正直に見せる）
+    setGeoState(acc > ACC_ROUGH ? "rough" : "on");
+  }, []);
+
+  /**
+   * 現在地の取得を始める。
+   *
+   * iOS Safari の落とし穴に合わせてある。
+   *  ・許可を求める呼び出しは、タップと同じ処理の流れで行う必要がある
+   *    （await をはさむと許可ダイアログが出ないことがある）
+   *  ・watchPosition から始めると、一度も呼ばれないまま黙ることがある。
+   *    まず getCurrentPosition で許可を取り、成功してから追従を始める
+   *  ・一度失敗したあと押し直しても何も起きない状態になりやすいので、
+   *    位置がまだ無いときは前の監視を止めて必ずやり直す
+   */
   const startWatch = useCallback(() => {
     // 押した時点で描画面を測り直す。
-    // 位置情報の許可ダイアログでアドレスバーの高さが変わることがあり、
-    // ここで直しておかないと地図が半分のまま残る
+    // 許可ダイアログでアドレスバーの高さが変わり、地図が半分のまま残るのを防ぐ
     mapRef.current?.resize();
     setTick((v) => v + 1);
 
-    // Safari / iOS で「使えない」原因のほとんどは HTTPS でないこと。
-    // localhost だけは例外的に許される。
     if (typeof window !== "undefined" && !window.isSecureContext) {
       setGeoState("insecure");
       return;
     }
     if (!navigator.geolocation) {
-      setGeoState("denied");
+      setGeoState("unavailable");
       return;
     }
-    if (watchId.current != null) {
-      if (fix) mapRef.current?.easeTo({ center: [fix.pos[0], fix.pos[1]], zoom: 18 });
+
+    // すでに位置が取れていて追従中なら、そこへ寄せるだけ
+    if (watchId.current != null && fix) {
+      mapRef.current?.easeTo({ center: [fix.pos[0], fix.pos[1]], zoom: 18 });
       return;
+    }
+    // 取れていないのに監視だけ残っている＝失敗している。止めてやり直す
+    if (watchId.current != null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
+    }
+    if (retryTimer.current != null) {
+      clearTimeout(retryTimer.current);
+      retryTimer.current = null;
     }
 
     setGeoState("asking");
 
-    const accept = (p: GeolocationPosition) => {
-      const acc = p.coords.accuracy;
-      const now = Date.now();
-      const next: Fix = { pos: [p.coords.longitude, p.coords.latitude], accuracy: acc, at: now };
-      setFix((prev) => {
-        if (!prev) return next;
-        // iOS/Android は最初に基地局やWi-Fiの粗い位置を返し、
-        // 数秒〜十数秒かけて GPS の精度に上がっていく。
-        // より精度の良いものだけ採用する。ただし古い値に居座られないよう、
-        // 15秒経ったら無条件に入れ替える。
-        const stale = now - prev.at > 15_000;
-        return acc <= prev.accuracy || stale ? next : prev;
-      });
-      // 粗いあいだも位置は出す（円で誤差を正直に見せる）
-      setGeoState(acc > ACC_ROUGH ? "rough" : "on");
+    const beginWatch = () => {
+      if (watchId.current != null) return;
+      watchId.current = navigator.geolocation.watchPosition(
+        accept,
+        (err) => {
+          // 追従中の一時的な失敗で、取れている位置を消さない
+          if (err.code === err.PERMISSION_DENIED) setGeoState("denied");
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 30_000 },
+      );
     };
 
     const fail = (err: GeolocationPositionError) => {
-      if (err.code === err.PERMISSION_DENIED) setGeoState("denied");
-      else if (err.code === err.TIMEOUT) setGeoState("timeout");
-      else setGeoState("unavailable");
+      if (err.code === err.PERMISSION_DENIED) {
+        setGeoState("denied");
+        return;
+      }
+      // 高精度が取れない場所（屋内・ビルの谷間）では粗い位置で妥協する
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          accept(p);
+          beginWatch();
+        },
+        (e2) => setGeoState(e2.code === e2.TIMEOUT ? "timeout" : "unavailable"),
+        { enableHighAccuracy: false, maximumAge: 60_000, timeout: 20_000 },
+      );
     };
 
-    // ★ iOS Safari は enableHighAccuracy の watchPosition が
-    //   一度も呼ばれないまま黙り込むことがある。
-    //   まず精度を問わない一発取得で「とにかく位置を出す」。
-    navigator.geolocation.getCurrentPosition(accept, () => {}, {
-      enableHighAccuracy: false,
-      maximumAge: 30_000,
-      timeout: 10_000,
-    });
+    // ★ここがタップと同じ流れで呼ばれることが重要。許可ダイアログはこれで出る
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        accept(p);
+        beginWatch();
+      },
+      fail,
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12_000 },
+    );
 
-    // そのうえで高精度の追従を始める
-    watchId.current = navigator.geolocation.watchPosition(accept, fail, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 30_000,
-    });
-
-    // 15秒経っても何も返らなければ、高精度をあきらめて取り直す。
-    // iOS で「押しても何も起きない」状態になるのを防ぐ
-    window.setTimeout(() => {
+    // 20秒経っても何も返らないときは、黙らせずに状態を出す
+    retryTimer.current = window.setTimeout(() => {
       setFix((cur) => {
-        if (cur) return cur;
-        navigator.geolocation.getCurrentPosition(accept, fail, {
-          enableHighAccuracy: false,
-          maximumAge: 60_000,
-          timeout: 20_000,
-        });
+        if (!cur) setGeoState("timeout");
         return cur;
       });
-    }, 15_000);
-  }, [fix]);
+    }, 20_000);
+  }, [fix, accept]);
+
+  /** 許可の状態を先に調べて、拒否されているなら押す前に伝える */
+  useEffect(() => {
+    void navigator.permissions
+      ?.query({ name: "geolocation" as PermissionName })
+      .then((s) => {
+        if (s.state === "denied") setGeoState("denied");
+        s.onchange = () => {
+          if (s.state === "denied") setGeoState("denied");
+        };
+      })
+      .catch(() => {
+        // Safari の古い版は未対応。押したときに分かるので何もしない
+      });
+  }, []);
 
   useEffect(
     () => () => {
       if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current);
+      if (retryTimer.current != null) clearTimeout(retryTimer.current);
     },
     [],
   );
@@ -716,11 +764,25 @@ export default function Guide() {
             )}
             {geoState === "timeout" && (
               <>
-                時間内に測位できませんでした
-                <span className="block text-[10px] text-slate-400">
-                  屋内では取得しにくくなります。もう一度お試しください
+                測位できませんでした
+                <button
+                  onClick={startWatch}
+                  className="mt-1 block rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold text-white"
+                >
+                  もう一度試す
+                </button>
+                <span className="mt-1 block text-[10px] text-slate-400">
+                  屋内では取得しにくくなります。窓際か屋外でお試しください
                 </span>
               </>
+            )}
+            {geoState === "denied" && (
+              <button
+                onClick={startWatch}
+                className="mt-1 block rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold text-white"
+              >
+                許可し直したら押す
+              </button>
             )}
             {geoState === "unavailable" && "現在地を取得できませんでした"}
             {geoState === "insecure" && (
