@@ -1,7 +1,10 @@
 "use client";
 
 /**
- * 教室の登録（Lv2以上）。
+ * 教室の登録（Lv3のみ）。
+ *
+ * 教室は建物と経路の土台になる情報で、消したり番号を変えたりすると
+ * 時間割や予約も道連れになる。触れる人を絞ってある。
  *
  * 「何号館の何階の何番の教室は何という名前か」をまとめて入れる画面。
  * シラバスからコピーした一覧をそのまま貼り付けられるようにしてある。
@@ -92,7 +95,7 @@ export default function RoomsPage() {
     void load();
   }, [load]);
 
-  const canEdit = role === "admin_l2" || role === "admin_l3";
+  const canEdit = role === "admin_l3";
 
   const ofTarget = useMemo(
     () => rows.filter((r) => r.building_id === target),
@@ -149,7 +152,7 @@ export default function RoomsPage() {
   if (!canEdit)
     return (
       <Shell>
-        <p className="text-sm text-slate-700">この画面は管理者（Lv2以上）だけが使えます。</p>
+        <p className="text-sm text-slate-700">この画面は管理者Lv3だけが使えます。</p>
         <Link href="/login" className="mt-3 inline-block text-sm font-bold text-blue-600">
           ログインへ
         </Link>
