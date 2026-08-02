@@ -178,39 +178,59 @@ export default function Guide() {
     }
 
     setGeoState("asking");
-    watchId.current = navigator.geolocation.watchPosition(
-      (p) => {
-        const acc = p.coords.accuracy;
-        const now = Date.now();
-        const next: Fix = { pos: [p.coords.longitude, p.coords.latitude], accuracy: acc, at: now };
 
-        setFix((prev) => {
-          if (!prev) return next;
-          // iOS/Android は最初に基地局やWi-Fiの粗い位置を返し、
-          // 数秒〜十数秒かけて GPS の精度に上がっていく。
-          // そこで「より精度の良いものだけ採用」する。
-          // ただし古くなった値に居座られないよう、15秒経ったら無条件に入れ替える。
-          const stale = now - prev.at > 15_000;
-          return acc <= prev.accuracy || stale ? next : prev;
+    const accept = (p: GeolocationPosition) => {
+      const acc = p.coords.accuracy;
+      const now = Date.now();
+      const next: Fix = { pos: [p.coords.longitude, p.coords.latitude], accuracy: acc, at: now };
+      setFix((prev) => {
+        if (!prev) return next;
+        // iOS/Android は最初に基地局やWi-Fiの粗い位置を返し、
+        // 数秒〜十数秒かけて GPS の精度に上がっていく。
+        // より精度の良いものだけ採用する。ただし古い値に居座られないよう、
+        // 15秒経ったら無条件に入れ替える。
+        const stale = now - prev.at > 15_000;
+        return acc <= prev.accuracy || stale ? next : prev;
+      });
+      // 粗いあいだも位置は出す（円で誤差を正直に見せる）
+      setGeoState(acc > ACC_ROUGH ? "rough" : "on");
+    };
+
+    const fail = (err: GeolocationPositionError) => {
+      if (err.code === err.PERMISSION_DENIED) setGeoState("denied");
+      else if (err.code === err.TIMEOUT) setGeoState("timeout");
+      else setGeoState("unavailable");
+    };
+
+    // ★ iOS Safari は enableHighAccuracy の watchPosition が
+    //   一度も呼ばれないまま黙り込むことがある。
+    //   まず精度を問わない一発取得で「とにかく位置を出す」。
+    navigator.geolocation.getCurrentPosition(accept, () => {}, {
+      enableHighAccuracy: false,
+      maximumAge: 30_000,
+      timeout: 10_000,
+    });
+
+    // そのうえで高精度の追従を始める
+    watchId.current = navigator.geolocation.watchPosition(accept, fail, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 30_000,
+    });
+
+    // 15秒経っても何も返らなければ、高精度をあきらめて取り直す。
+    // iOS で「押しても何も起きない」状態になるのを防ぐ
+    window.setTimeout(() => {
+      setFix((cur) => {
+        if (cur) return cur;
+        navigator.geolocation.getCurrentPosition(accept, fail, {
+          enableHighAccuracy: false,
+          maximumAge: 60_000,
+          timeout: 20_000,
         });
-
-        // 粗いあいだも位置は出す（円で誤差を正直に見せる）。
-        // 経路の起点に使うかどうかは別途 accuracy で判断する。
-        setGeoState(acc > ACC_ROUGH ? "rough" : "on");
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) setGeoState("denied");
-        else if (err.code === err.TIMEOUT) setGeoState("timeout");
-        else setGeoState("unavailable");
-      },
-      {
-        enableHighAccuracy: true,
-        // 古い位置を使い回さない。毎回測り直させる
-        maximumAge: 0,
-        // GPSが安定するまで時間がかかる。短いとiOSで即タイムアウトする
-        timeout: 30_000,
-      },
-    );
+        return cur;
+      });
+    }, 15_000);
   }, [fix]);
 
   useEffect(
@@ -572,44 +592,87 @@ export default function Guide() {
         >
           案内
         </button>
-      </div>
 
-      {/* 学内の情報。四角いボタンを押すと開く */}
-      <div className="absolute right-4 top-4 z-10 flex flex-row-reverse items-start gap-2">
-        <button
-          onClick={() => setSide((v) => !v)}
-          aria-label="学内の情報"
-          className="flex h-12 w-12 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-white/95 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
-        >
-          <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "translate-y-[6px] rotate-45" : ""}`} />
-          <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "opacity-0" : ""}`} />
-          <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "-translate-y-[6px] -rotate-45" : ""}`} />
-        </button>
+        {/* 学内の情報。四角いボタンを押すと横に開く */}
+        <div className="flex items-start gap-2">
+          <button
+            onClick={() => setSide((v) => !v)}
+            aria-label="学内の情報"
+            className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-white/95 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          >
+            <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "translate-y-[6px] rotate-45" : ""}`} />
+            <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "opacity-0" : ""}`} />
+            <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "-translate-y-[6px] -rotate-45" : ""}`} />
+          </button>
 
-        {side && (
-          <div className="w-56 rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur">
-            <div className="mb-2 text-[11px] font-bold text-slate-500">学内の情報</div>
-            <div className="flex flex-col gap-1">
-              {["食堂のメニュー", "授業予定", "空き教室"].map((label) => (
-                <button
-                  key={label}
-                  onClick={() => setLogin(true)}
-                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  {label}
-                  <span className="text-xs text-slate-400">🔒</span>
-                </button>
-              ))}
+          {side && (
+            <div className="w-52 rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur">
+              <div className="mb-2 text-[11px] font-bold text-slate-500">学内の情報</div>
+              <div className="flex flex-col gap-1">
+                {["食堂のメニュー", "授業予定", "空き教室"].map((label) => (
+                  <button
+                    key={label}
+                    onClick={() => setLogin(true)}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    {label}
+                    <span className="text-xs text-slate-400">🔒</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] leading-relaxed text-slate-500">
+                閲覧には管理者の承認が必要です。
+              </p>
+              <button
+                onClick={() => setLogin(true)}
+                className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+              >
+                ログイン
+              </button>
             </div>
-            <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] leading-relaxed text-slate-500">
-              閲覧には管理者の承認が必要です。
-            </p>
-            <button
-              onClick={() => setLogin(true)}
-              className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
-            >
-              ログイン
-            </button>
+          )}
+        </div>
+
+        {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
+        {geoState !== "idle" && (
+          <div className="max-w-[16rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
+            {geoState === "asking" && "現在地を取得中…（初回は30秒ほどかかります）"}
+            {geoState === "rough" && (
+              <>
+                精度を上げています… ±{Math.round(fix?.accuracy ?? 0)}m
+                <span className="block text-[10px] text-slate-400">
+                  屋外に出て少し待つと精度が上がります
+                </span>
+              </>
+            )}
+            {geoState === "on" &&
+              (inCampus === false ? "圏外（キャンパス外）" : `±${Math.round(fix?.accuracy ?? 0)}m`)}
+            {geoState === "denied" && (
+              <>
+                現在地が拒否されています
+                <span className="block text-[10px] text-slate-400">
+                  iPhone：設定 → プライバシー → 位置情報サービス → Safari を「確認」か「許可」に
+                </span>
+              </>
+            )}
+            {geoState === "timeout" && (
+              <>
+                時間内に測位できませんでした
+                <span className="block text-[10px] text-slate-400">
+                  屋内では取得しにくくなります。もう一度お試しください
+                </span>
+              </>
+            )}
+            {geoState === "unavailable" && "現在地を取得できませんでした"}
+            {geoState === "insecure" && (
+              <>
+                この接続では現在地を使えません
+                <span className="block text-[10px] text-slate-400">
+                  Safari などは HTTPS でないと位置情報を許可しません。
+                  公開URL（https://）から開いてください
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -728,49 +791,6 @@ export default function Guide() {
       <span className="absolute bottom-0.5 right-1.5 z-30 rounded bg-white/70 px-1 text-[9px] text-slate-600">
         地理院タイル
       </span>
-
-      {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
-      {geoState !== "idle" && (
-        <div className="absolute left-4 top-32 z-10 max-w-[16rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
-          {geoState === "asking" && "現在地を取得中…（初回は30秒ほどかかります）"}
-          {geoState === "rough" && (
-            <>
-              精度を上げています… ±{Math.round(fix?.accuracy ?? 0)}m
-              <span className="block text-[10px] text-slate-400">
-                屋外に出て少し待つと精度が上がります
-              </span>
-            </>
-          )}
-          {geoState === "on" &&
-            (inCampus === false ? "圏外（キャンパス外）" : `±${Math.round(fix?.accuracy ?? 0)}m`)}
-          {geoState === "denied" && (
-            <>
-              現在地が拒否されています
-              <span className="block text-[10px] text-slate-400">
-                iPhone：設定 → プライバシー → 位置情報サービス → Safari を「確認」か「許可」に
-              </span>
-            </>
-          )}
-          {geoState === "timeout" && (
-            <>
-              時間内に測位できませんでした
-              <span className="block text-[10px] text-slate-400">
-                屋内では取得しにくくなります。もう一度お試しください
-              </span>
-            </>
-          )}
-          {geoState === "unavailable" && "現在地を取得できませんでした"}
-          {geoState === "insecure" && (
-            <>
-              この接続では現在地を使えません
-              <span className="block text-[10px] text-slate-400">
-                Safari などは HTTPS でないと位置情報を許可しません。
-                公開URL（https://）から開いてください
-              </span>
-            </>
-          )}
-        </div>
-      )}
 
       {/* 経路検索のパネル */}
       {panel && data && (

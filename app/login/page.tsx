@@ -57,7 +57,31 @@ export default function LoginPage() {
     try {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password: pw });
-        if (error) throw error;
+
+        if (error) {
+          // 「email rate limit exceeded」は Supabase が確認メールを
+          // 送ろうとして送信上限に当たっている。この設計はメールを使わないので、
+          // 本来は送られないはず。ただし利用者を止めないよう、
+          // 作成済みなら黙ってログインに切り替えて先へ進める。
+          const rateLimited = /rate limit|too many requests/i.test(error.message);
+          if (rateLimited) {
+            const retry = await supabase.auth.signInWithPassword({ email, password: pw });
+            if (!retry.error) {
+              location.href = "/";
+              return;
+            }
+            setMsg({
+              kind: "err",
+              text:
+                "登録の確認メールが送信上限に達しています。" +
+                "管理者は Supabase の Authentication → Email → Confirm email を OFF にしてください" +
+                "（このサイトはメールを使いません）。",
+            });
+            return;
+          }
+          throw error;
+        }
+
         setMsg({
           kind: "ok",
           text: "申請しました。管理者の承認をお待ちください。",
@@ -197,9 +221,12 @@ export default function LoginPage() {
 /** Supabase の英語メッセージを、利用者に伝わる日本語にする */
 function translate(m: string): string {
   if (/invalid login credentials/i.test(m)) return "メールアドレスかパスワードが違います";
-  if (/already registered|already been registered/i.test(m)) return "このメールアドレスは登録済みです";
+  if (/already registered|already been registered/i.test(m))
+    return "このメールアドレスは登録済みです。［ログイン］から入ってください";
   if (/email not confirmed/i.test(m))
-    return "メール確認が有効になっています。Supabase の Confirm email を OFF にしてください";
+    return "メール確認が有効になっています。管理者は Supabase の Authentication → Email → Confirm email を OFF にしてください";
+  if (/rate limit|too many requests/i.test(m))
+    return "送信上限に達しています。しばらく待つか、管理者に Confirm email の解除を依頼してください";
   if (/password/i.test(m)) return "パスワードの条件を満たしていません";
   return m;
 }

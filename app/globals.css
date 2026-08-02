@@ -6,9 +6,24 @@ body {
   margin: 0;
 }
 
+/* iOS の「ダブルタップで拡大」を止める。
+   ボタンを続けて押したときにページが拡大してしまうのを防ぐ */
+button,
+a,
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
 body {
   background: #f8fafc;
   color: #0f172a;
+  /* 横向きにしたときに文字だけ大きくなるのを防ぐ */
+  -webkit-text-size-adjust: 100%;
+  /* 端まで引っぱったときの跳ね返りで画面がずれないようにする */
+  overscroll-behavior: none;
   font-family:
     system-ui,
     -apple-system,
@@ -22,12 +37,6 @@ body {
    地理院タイルの利用条件で必須なので、消さずに控えめに出す */
 .maplibregl-ctrl-attrib {
   font-size: 10px;
-}
-
-/* 右上には自前の［案内］ボタンを置いているので、
-   地図の操作系はその下から始める */
-.maplibregl-ctrl-top-right {
-  top: 3.75rem;
 }
 
 /* 起動時のタイトル画面のアニメーション */
