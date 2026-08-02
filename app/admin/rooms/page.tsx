@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { FeatureCollection, Polygon } from "geojson";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
+import { AdminHeader, AdminMenu } from "@/components/AdminNav";
 import { type Role } from "@/lib/auth";
 import { guessFloor, floorLabel, type BuildingProps } from "@/lib/features";
 
@@ -163,13 +164,8 @@ export default function RoomsPage() {
 
   return (
     <Shell wide>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">教室の登録</h1>
-        <div className="flex gap-3 text-xs font-semibold text-slate-500">
-          <Link href="/admin" className="hover:text-slate-800">承認・権限</Link>
-          <Link href="/" className="hover:text-slate-800">地図へ</Link>
-        </div>
-      </div>
+      <AdminHeader title="教室の登録" />
+      <AdminMenu current="rooms" role={role} />
 
       {msg && <p className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-800">{msg}</p>}
 

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
+import { AdminHeader, AdminMenu } from "@/components/AdminNav";
 import { ROLE_LABEL, canManageCafeteria, type Role } from "@/lib/auth";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
@@ -214,13 +215,8 @@ export default function CafeteriaAdminPage() {
 
   return (
     <Shell wide>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">食堂のメニュー</h1>
-        <div className="flex gap-3 text-xs font-semibold text-slate-500">
-          <Link href="/admin" className="hover:text-slate-800">承認</Link>
-          <Link href="/" className="hover:text-slate-800">地図</Link>
-        </div>
-      </div>
+      <AdminHeader title="食堂のメニュー" />
+      <AdminMenu current="cafeteria" role={role} />
 
       {/* ---- 1. 日を選ぶ ---- */}
       {!date && (

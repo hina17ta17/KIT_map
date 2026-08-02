@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
+import { AdminHeader, AdminMenu } from "@/components/AdminNav";
 import { ROLE_LABEL, canManage, type Role } from "@/lib/auth";
 
 type Row = { id: string; email: string; role: Role; created_at: string };
@@ -107,15 +108,8 @@ export default function AdminPage() {
 
   return (
     <Shell wide>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">承認・権限の管理</h1>
-        <div className="flex gap-3 text-xs font-semibold text-slate-500">
-          <Link href="/admin/rooms" className="hover:text-slate-800">教室の登録</Link>
-          <Link href="/admin/schedule" className="hover:text-slate-800">予定の登録</Link>
-          <Link href="/admin/cafeteria" className="hover:text-slate-800">食堂</Link>
-          <Link href="/" className="hover:text-slate-800">地図へ</Link>
-        </div>
-      </div>
+      <AdminHeader title="承認・権限の管理" />
+      <AdminMenu current="approve" role={myRole} />
 
       {msg && (
         <p className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-800">{msg}</p>

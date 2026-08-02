@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
+import { AdminHeader, AdminMenu } from "@/components/AdminNav";
 import { type Role } from "@/lib/auth";
 
 type Kind = "class" | "event" | "activity";
@@ -439,14 +440,8 @@ export default function SchedulePage() {
 
   return (
     <Shell wide>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-900">予定の登録</h1>
-        <div className="flex gap-3 text-xs font-semibold text-slate-500">
-          <Link href="/admin" className="hover:text-slate-800">承認</Link>
-          <Link href="/admin/rooms" className="hover:text-slate-800">教室</Link>
-          <Link href="/" className="hover:text-slate-800">地図</Link>
-        </div>
-      </div>
+      <AdminHeader title="予定の登録" />
+      <AdminMenu current="schedule" role={role} />
 
       {setupNeeded && (
         <div className="mb-3 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
