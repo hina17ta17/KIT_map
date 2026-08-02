@@ -81,6 +81,10 @@ export default function Guide() {
   const [fatal, setFatal] = useState<string | null>(null);
 
   const [fix, setFix] = useState<Fix | null>(null);
+  /** 向いている方角。真北を0として時計回りの度数。分からなければ null */
+  const [heading, setHeading] = useState<number | null>(null);
+  /** 方位磁針をもう読み始めたか */
+  const compassOn = useRef(false);
   const [geoState, setGeoState] = useState<
     "idle" | "asking" | "on" | "rough" | "denied" | "timeout" | "unavailable" | "insecure"
   >("idle");
@@ -293,8 +297,59 @@ export default function Guide() {
       const stale = now - prev.at > 15_000;
       return acc <= prev.accuracy || stale ? next : prev;
     });
+    // 進んでいるときは、位置から向きが分かることがある。
+    // 止まっていると null や NaN が来るので、そのときは触らない
+    const h = p.coords.heading;
+    if (h != null && Number.isFinite(h) && (p.coords.speed ?? 0) > 0.5) {
+      setHeading(h);
+    }
     // 粗いあいだも位置は出す（円で誤差を正直に見せる）
     setGeoState(acc > ACC_ROUGH ? "rough" : "on");
+  }, []);
+
+  /**
+   * 端末の向き（方位磁針）を読み始める。
+   *
+   * 位置から分かる向きは歩いている間しか取れない。止まっていても
+   * どちらを向いているか出したいので、方位磁針からも取る。
+   *
+   * iOS は許可を求める必要があり、その求め方はタップと同じ流れで
+   * 呼ばないと拒まれる。現在地のボタンから一緒に呼ぶ。
+   */
+  const startCompass = useCallback(() => {
+    if (compassOn.current) return;
+
+    const onOrient = (ev: DeviceOrientationEvent) => {
+      // iOS は真北からの角度をそのままくれる。
+      // Android は alpha が反時計回りなので、向きを合わせる
+      const ios = (ev as DeviceOrientationEvent & { webkitCompassHeading?: number })
+        .webkitCompassHeading;
+      if (ios != null && Number.isFinite(ios)) {
+        setHeading(ios);
+        return;
+      }
+      if (ev.absolute && ev.alpha != null && Number.isFinite(ev.alpha)) {
+        setHeading((360 - ev.alpha) % 360);
+      }
+    };
+
+    const attach = () => {
+      compassOn.current = true;
+      window.addEventListener("deviceorientationabsolute", onOrient as EventListener);
+      window.addEventListener("deviceorientation", onOrient as EventListener);
+    };
+
+    const anyDOE = DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+    if (typeof anyDOE?.requestPermission === "function") {
+      // 断られても現在地そのものは使えるので、黙って諦める
+      void anyDOE.requestPermission().then((r) => {
+        if (r === "granted") attach();
+      }).catch(() => {});
+    } else if (typeof window !== "undefined" && "DeviceOrientationEvent" in window) {
+      attach();
+    }
   }, []);
 
   /**
@@ -313,6 +368,8 @@ export default function Guide() {
     // 許可ダイアログでアドレスバーの高さが変わり、地図が半分のまま残るのを防ぐ
     mapRef.current?.resize();
     setTick((v) => v + 1);
+    // 向きの許可も、このタップと同じ流れで求める
+    startCompass();
 
     if (typeof window !== "undefined" && !window.isSecureContext) {
       setGeoState("insecure");
@@ -385,7 +442,7 @@ export default function Guide() {
         return cur;
       });
     }, 20_000);
-  }, [fix, accept]);
+  }, [fix, accept, startCompass]);
 
   /** 許可の状態を先に調べて、拒否されているなら押す前に伝える */
   useEffect(() => {
@@ -842,6 +899,31 @@ export default function Guide() {
                 strokeWidth={3.5}
                 opacity={fix && fix.accuracy <= ACC_TRUST ? 1 : 0.55}
               />
+
+              {/* 向いている方角。丸の上にとがった先を重ねる。
+                  地図を回していても正しい方角を指すよう、地図の向きを差し引く */}
+              {heading != null && (
+                <g
+                  transform={`translate(${view.me.x},${view.me.y}) rotate(${
+                    heading - (mapRef.current?.getBearing() ?? 0)
+                  })`}
+                >
+                  {/* 進む先へ広がる薄い光。どちらを向いているか遠目にも分かる */}
+                  <path
+                    d="M -13 -16 A 20 20 0 0 1 13 -16 L 0 -40 Z"
+                    fill="#38bdf8"
+                    opacity={0.22}
+                  />
+                  {/* とがった先 */}
+                  <path
+                    d="M 0 -20 L 7 -8 L 0 -11 L -7 -8 Z"
+                    fill="#38bdf8"
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                  />
+                </g>
+              )}
             </>
           )}
 

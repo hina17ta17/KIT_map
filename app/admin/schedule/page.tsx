@@ -22,7 +22,8 @@ type Kind = "class" | "event" | "activity";
 type Period = { id: number; label: string; starts_at: string; ends_at: string };
 type Room = { id: number; building_code: string; code: string; name: string };
 type Faculty = { id: number; name: string };
-type Dept = { id: number; faculty_id: number; name: string };
+/** code は学科のクラス記号（機械工学科なら KM）。006 を流す前は空 */
+type Dept = { id: number; faculty_id: number; name: string; code?: string };
 type Course = { id: number; name: string; class_name: string; teacher: string };
 type Cat = { id: number; name: string };
 type Act = { id: number; category_id: number | null; name: string };
@@ -139,7 +140,8 @@ export default function SchedulePage() {
         supabase.from("periods").select("id, label, starts_at, ends_at").order("id"),
         supabase.from("rooms").select("id, building_code, code, name").order("building_code").order("code"),
         supabase.from("faculties").select("id, name").order("sort_order"),
-        supabase.from("departments").select("id, faculty_id, name").order("sort_order"),
+        // 記号の列がまだ無い場合もあるので、列を並べずにまとめて取る
+        supabase.from("departments").select("*").order("sort_order"),
         supabase.from("activity_categories").select("id, name").order("sort_order"),
         supabase.from("club_activities").select("id, category_id, name").order("sort_order"),
       ]);
@@ -194,6 +196,11 @@ export default function SchedulePage() {
   const actsInCat = useMemo(
     () => (catId === null ? [] : acts.filter((a) => a.category_id === catId)),
     [acts, catId],
+  );
+  /** 選んだ学科のクラス記号。クラス欄の書き方を示すのに使う */
+  const deptCode = useMemo(
+    () => depts.find((d) => d.id === deptId)?.code ?? "",
+    [depts, deptId],
   );
 
   /* ---------------- 登録 ---------------- */
@@ -642,10 +649,19 @@ export default function SchedulePage() {
                   <input
                     value={className}
                     onChange={(e) => setClassName(e.target.value)}
-                    placeholder="クラス"
+                    placeholder={deptCode ? `${deptCode}1` : "クラス"}
                     className="w-24 rounded-xl bg-slate-100 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              )}
+              {courseId === null && (
+                <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                  クラスは、同じ科目を分けて受ける組のこと。
+                  {deptCode
+                    ? `この学科の記号は ${deptCode} なので、${deptCode}1・${deptCode}2 のように書きます。`
+                    : "KM1・CC2 のように、学科の記号と組の番号で書きます。"}
+                  分かれていなければ空のままで構いません。
+                </p>
               )}
             </Field>
 
