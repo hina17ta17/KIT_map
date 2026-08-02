@@ -19,7 +19,7 @@ import { BASES, GSI_ATTRIBUTION, INITIAL_VIEW } from "@/lib/gsi";
 import { categoryOf, type CheckpointFeature } from "@/lib/features";
 import { loadAppData, loadRooms, search, type AppData, type SearchHit } from "@/lib/appdata";
 import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
-import { buildGraph, buildSteps, findPath, nearestNode } from "@/lib/route";
+import { buildGraph, buildSteps, findBestPath, nearestNode } from "@/lib/route";
 import CampusPanel from "./CampusPanel";
 import { metersBetween } from "@/lib/geo";
 
@@ -538,36 +538,45 @@ export default function Guide() {
   const route = useMemo(() => {
     if (!data || !graph || !trip) return null;
 
-    /* 起点 */
-    let startId: string | null = null;
+    /* 起点。建物から出るときは、その建物の出入口すべてを候補にする */
+    let startIds: string[] = [];
     let fromGate = false;
     if (trip.origin.kind === "me") {
-      if (fix && inCampus !== false) startId = nearestNode(graph, fix.pos, SNAP_MAX)?.id ?? null;
+      const near = fix && inCampus !== false ? nearestNode(graph, fix.pos, SNAP_MAX)?.id : null;
+      if (near) startIds = [near];
       // 現在地がまだ取れていなくても案内は出す。門を起点にして、そう伝える
-      if (!startId) {
+      if (startIds.length === 0) {
         const gate = (data.checkpoints.features as CheckpointFeature[]).find(
           (c) => c.properties.kind === "gate",
         );
-        startId = gate?.properties.id ?? null;
-        fromGate = true;
+        if (gate) {
+          startIds = [gate.properties.id];
+          fromGate = true;
+        }
       }
-      if (!startId) return { error: "経路の起点が見つかりません" as const };
+      if (startIds.length === 0) return { error: "経路の起点が見つかりません" as const };
     } else {
       const ents = entrancesOf(trip.origin.hit.buildingId);
       if (ents.length === 0) return { error: "出発地の入口が登録されていません" as const };
-      startId = ents[0].properties.id;
+      startIds = ents.map((e) => e.properties.id);
     }
 
-    /* 目的地：紐づく出入口のうち起点からいちばん近いもの */
+    /* 目的地の出入口すべて */
     const ents = entrancesOf(trip.dest.buildingId);
     if (ents.length === 0) return { error: "目的地の入口が登録されていません" as const };
-    const startPos = graph.pos.get(startId)!;
-    const goal = ents
-      .map((e) => ({ e, d: metersBetween(startPos, e.geometry.coordinates) }))
-      .sort((a, b) => a.d - b.d)[0].e;
 
-    const path = findPath(graph, startId, goal.properties.id);
-    if (!path) return { error: "経路が見つかりませんでした" as const };
+    // 出入口の組み合わせをすべて見比べて、道なりでいちばん短くなるものを選ぶ。
+    // 直線で近い出入口が道なりでも近いとはかぎらない
+    const found = findBestPath(
+      graph,
+      startIds,
+      ents.map((e) => e.properties.id),
+    );
+    if (!found) return { error: "経路が見つかりませんでした" as const };
+
+    const path = found.path;
+    const startId = path[0];
+    const goal = ents.find((e) => e.properties.id === path[path.length - 1]) ?? ents[0];
 
     const { steps, meters, minutes } = buildSteps(graph, path, data, trip.dest.title);
     return { path, steps, meters, minutes, goal, startId, fromGate };
@@ -688,7 +697,7 @@ export default function Guide() {
         label: f.properties.name || (f.properties.code ? `${f.properties.code}号館` : ""),
         key: orderKey(f.properties.name ?? "", f.properties.code ?? ""),
       }))
-      .filter((x) => x.label && !HIDDEN_NAMES.has(x.f.properties.name ?? ""))
+      .filter((x) => x.label)
       .sort(
         (a, b) =>
           a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2].localeCompare(b.key[2], "ja"),
@@ -761,6 +770,7 @@ export default function Guide() {
     const canvas = map.getContainer();
     const W = canvas.clientWidth;
     const H = canvas.clientHeight;
+    const zoom = map.getZoom();
 
     const taken: LabelBox[] = [];
     const buildings: { f: (typeof data.buildings.features)[number]; c: { x: number; y: number } }[] =
@@ -773,11 +783,11 @@ export default function Guide() {
         text: f.properties.name || f.properties.code || "",
       }))
       // 画面の外は判定にも描画にも要らない。少しはみ出す分だけ余裕を持たせる。
-      // 出さないと決めた建物も、ここで落とす
+      // 構内から離れた場所は、寄ったときだけ出す
       .filter(
         (x) =>
           x.text &&
-          !HIDDEN_NAMES.has(x.f.properties.name ?? "") &&
+          (zoom >= ZOOM_ONLY_AT || !ZOOM_ONLY_NAMES.has(x.f.properties.name ?? "")) &&
           x.c.x > -80 &&
           x.c.y > -40 &&
           x.c.x < W + 80 &&
@@ -1531,12 +1541,15 @@ function inRing(poly: Position[], at: Position): boolean {
 }
 
 /**
- * 地図の名前にも一覧にも出さない建物。
+ * 拡大したときだけ地図に名前を出す建物。
  *
- * データには残すので、経路の目的地には指定できるし、検索でも見つかる。
- * 画面に出すと、これまでの並びや見え方が変わってしまうため出さない。
+ * 構内から離れた場所なので、引いた状態では出さない。
+ * 出しっぱなしにすると、遠くの名前が構内の名前と場所を取り合ってしまう。
+ * 建物の一覧にはいつでも出す。
  */
-const HIDDEN_NAMES = new Set(["野々市工大前駅", "バス停"]);
+const ZOOM_ONLY_NAMES = new Set(["野々市工大前駅", "バス停"]);
+/** この縮尺より寄ったら、上の名前も出す */
+const ZOOM_ONLY_AT = 17.5;
 
 /** 全角半角の括弧ゆれを吸収して比べる */
 const plain = (s: string) => s.replace(/[（）()\s]/g, "");

@@ -133,6 +133,90 @@ export function findPath(graph: Graph, from: string, to: string): string[] | nul
   return path;
 }
 
+/**
+ * 出入口が複数あるとき、いちばん短くなる組み合わせを選ぶ。
+ *
+ * ■ なぜ要るか
+ *   建物には出入口がいくつもある。直線でいちばん近い出入口が、
+ *   道なりでも近いとはかぎらない。壁や建物を回り込むと、
+ *   遠く見えた出入口のほうが早く着くことがある。
+ *   直線で決め打つと、そこで最短を取り逃す。
+ *
+ * ■ 進め方
+ *   出発側の出入口すべてを距離0として同時に広げる（多点始点）。
+ *   一度広げれば、すべての点への最短距離が分かるので、
+ *   そこから目的側の出入口のうち最短のものを選ぶ。
+ *   出入口の数が増えても探索は一度で済む。
+ *
+ *   ここでは推定値を使わない素直な広げ方（ダイクストラ）にしている。
+ *   行き先が複数あると推定値の置き方が難しくなるうえ、
+ *   648点では速さの差が出ないため。
+ */
+export function findBestPath(
+  graph: Graph,
+  fromIds: string[],
+  toIds: string[],
+): { path: string[]; meters: number } | null {
+  const starts = fromIds.filter((id) => graph.pos.has(id));
+  const goals = new Set(toIds.filter((id) => graph.pos.has(id)));
+  if (starts.length === 0 || goals.size === 0) return null;
+
+  const dist = new Map<string, number>();
+  const prev = new Map<string, string>();
+  const done = new Set<string>();
+  const open = new Map<string, number>();
+  for (const s of starts) {
+    dist.set(s, 0);
+    open.set(s, 0);
+  }
+
+  while (open.size) {
+    // 節点が少ないので、優先度付きキューは使わず毎回いちばん小さいものを探す
+    let cur = "";
+    let curD = Infinity;
+    for (const [id, d] of open) {
+      if (d < curD) {
+        curD = d;
+        cur = id;
+      }
+    }
+    open.delete(cur);
+    done.add(cur);
+
+    for (const e of graph.adj.get(cur) ?? []) {
+      if (done.has(e.to)) continue;
+      const nd = curD + e.cost;
+      if (nd < (dist.get(e.to) ?? Infinity)) {
+        dist.set(e.to, nd);
+        prev.set(e.to, cur);
+        open.set(e.to, nd);
+      }
+    }
+  }
+
+  // 目的側の出入口のうち、いちばん近いもの
+  let best: string | null = null;
+  let bestD = Infinity;
+  for (const g of goals) {
+    const d = dist.get(g);
+    if (d != null && d < bestD) {
+      bestD = d;
+      best = g;
+    }
+  }
+  if (!best) return null;
+
+  const path = [best];
+  let cur = best;
+  for (;;) {
+    const p = prev.get(cur);
+    if (!p) break;
+    path.unshift(p);
+    cur = p;
+  }
+  return { path, meters: bestD };
+}
+
 /* ---------------- 案内文 ---------------- */
 
 export type Step = {
