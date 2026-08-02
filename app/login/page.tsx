@@ -108,7 +108,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 p-4">
+    <main className="flex h-[100dvh] items-center justify-center overflow-y-auto bg-slate-950 p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
         <Link href="/" className="text-xl font-light tracking-[0.18em] text-slate-900">
           KIT<span className="ml-1.5 font-semibold">map</span>

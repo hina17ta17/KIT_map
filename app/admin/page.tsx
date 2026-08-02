@@ -161,7 +161,8 @@ export default function AdminPage() {
 
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <main className="min-h-[100dvh] bg-slate-100 p-4">
+    // 本文は地図のために overflow-hidden。ここで送れるようにする
+    <main className="h-[100dvh] overflow-y-auto bg-slate-100 p-4">
       <div className={`mx-auto ${wide ? "max-w-2xl" : "max-w-sm"} rounded-2xl bg-white p-5 shadow-lg`}>
         {children}
       </div>

@@ -67,8 +67,8 @@ export default function SchedulePage() {
   const [role, setRole] = useState<Role | null>(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  /** SQL がまだ流されていない場合に、何を実行すべきかを出す */
-  const [setupNeeded, setSetupNeeded] = useState<string | null>(null);
+  /** SQL をまだ流していないか。表が無いことで見分ける */
+  const [setupNeeded, setSetupNeeded] = useState(false);
 
   const [kind, setKind] = useState<Kind>("class");
   const [date, setDate] = useState(today());
@@ -83,7 +83,8 @@ export default function SchedulePage() {
 
   /* 入力 */
   const [buildingCode, setBuildingCode] = useState("");
-  const [roomId, setRoomId] = useState<number | null>(null);
+  /** 選んだ教室。まとめて同じ予定を入れられるよう複数持つ */
+  const [roomIds, setRoomIds] = useState<number[]>([]);
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [deptId, setDeptId] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | null>(null);
@@ -98,8 +99,8 @@ export default function SchedulePage() {
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
-  /** 消してよいか尋ねている最中の相手 */
-  const [confirming, setConfirming] = useState<Conflict[] | null>(null);
+  /** 消してよいか尋ねている最中の教室と、その相手 */
+  const [pending, setPending] = useState<{ room: Room; conflicts: Conflict[] }[] | null>(null);
 
   /* ---------------- 読み込み ---------------- */
 
@@ -141,10 +142,11 @@ export default function SchedulePage() {
       setCats((c.data as Cat[]) ?? []);
       setActs((a.data as Act[]) ?? []);
 
-      const missing: string[] = [];
-      if (isMissingTable(f.error) || isMissingTable(d.error)) missing.push("003_departments_activities.sql");
-      if (isMissingTable(c.error) || isMissingTable(a.error)) missing.push("002_cafeteria_timetable.sql / 003");
-      if (missing.length) setSetupNeeded([...new Set(missing)].join(" と "));
+      // 表そのものが無い＝まだ SQL を流していない。
+      // どれか一つでも無ければ同じことなので、まとめて一度だけ知らせる
+      setSetupNeeded(
+        [f.error, d.error, c.error, a.error].some((e) => isMissingTable(e)),
+      );
 
       setLoading(false);
     })();
@@ -170,7 +172,10 @@ export default function SchedulePage() {
     return rooms.filter((r) => r.building_code === b);
   }, [rooms, buildingCode]);
 
-  const room = useMemo(() => rooms.find((r) => r.id === roomId) ?? null, [rooms, roomId]);
+  const chosen = useMemo(
+    () => roomIds.map((id) => rooms.find((r) => r.id === id)).filter((r): r is Room => !!r),
+    [rooms, roomIds],
+  );
   const actsInCat = useMemo(
     () => (catId === null ? [] : acts.filter((a) => a.category_id === catId)),
     [acts, catId],
@@ -178,12 +183,20 @@ export default function SchedulePage() {
 
   /* ---------------- 登録 ---------------- */
 
+  /**
+   * 選んだ教室ぶん、順に登録する。
+   *
+   * targets を渡すと、その教室だけを対象にする。
+   * 「消してよいか」を尋ねたあとは、すでに入った教室をもう一度なぞらないよう、
+   * 尋ねた相手だけを渡し直す。
+   */
   const submit = useCallback(
-    async (force: boolean) => {
+    async (force: boolean, targets?: Room[]) => {
       setMsg(null);
       const supabase = createClient();
+      const list = targets ?? chosen;
 
-      if (!roomId) {
+      if (list.length === 0) {
         setMsg({ kind: "err", text: "教室を選んでください" });
         return;
       }
@@ -229,52 +242,68 @@ export default function SchedulePage() {
           return;
         }
 
-        const { data, error } = await supabase.rpc("register_slot", {
-          p_kind: kind,
-          p_room_id: roomId,
-          p_date: date,
-          p_period_id: kind === "class" ? periodId : null,
-          p_starts: kind === "class" ? null : startAt,
-          p_ends: kind === "class" ? null : endAt,
-          p_course_id: kind === "class" ? useCourseId : null,
-          p_activity_id: kind === "activity" ? activityId : null,
-          p_title: kind === "event" ? title.trim() : title.trim(),
-          p_teacher: teacher.trim(),
-          p_force: force,
+        let done = 0;
+        let removed = 0;
+        const blockedByClass: string[] = [];
+        const blockedOther: string[] = [];
+        const ask: { room: Room; conflicts: Conflict[] }[] = [];
+
+        for (const rm of list) {
+          const { data, error } = await supabase.rpc("register_slot", {
+            p_kind: kind,
+            p_room_id: rm.id,
+            p_date: date,
+            p_period_id: kind === "class" ? periodId : null,
+            p_starts: kind === "class" ? null : startAt,
+            p_ends: kind === "class" ? null : endAt,
+            p_course_id: kind === "class" ? useCourseId : null,
+            p_activity_id: kind === "activity" ? activityId : null,
+            p_title: title.trim(),
+            p_teacher: teacher.trim(),
+            p_force: force,
+          });
+          if (error) throw error;
+
+          const res = data as SlotResult;
+          const where = `${rm.building_code}号館 ${rm.code}`;
+
+          if (res.ok) {
+            done++;
+            removed += res.removed?.length ?? 0;
+          } else if (res.reason === "blocked") {
+            const names = res.blocked_by
+              .map((b) => `${KIND_LABEL[b.kind]}「${b.title || "（名称なし）"}」`)
+              .join("・");
+            if (res.blocked_by.some((b) => b.kind === "class")) blockedByClass.push(`${where}（${names}）`);
+            else blockedOther.push(`${where}（${names}）`);
+          } else {
+            ask.push({ room: rm, conflicts: res.will_remove });
+          }
+        }
+
+        // 尋ねる相手が残っていれば、そこで一度止める
+        if (ask.length > 0) {
+          setPending(ask);
+          if (done > 0) {
+            setMsg({ kind: "warn", text: `${done}室に登録しました。残りは確認が必要です。` });
+          }
+          return;
+        }
+
+        setPending(null);
+
+        const parts: string[] = [];
+        if (done > 0) parts.push(`${done}室に登録しました。`);
+        if (removed > 0) parts.push(`重なっていた予定 ${removed} 件を取り消し、登録者に知らせました。`);
+        if (blockedByClass.length > 0)
+          parts.push(`授業があるため登録できませんでした：${blockedByClass.join(" / ")}`);
+        if (blockedOther.length > 0)
+          parts.push(`すでに予定があり、先に入れたものが優先されます：${blockedOther.join(" / ")}`);
+
+        setMsg({
+          kind: done > 0 ? (blockedByClass.length || blockedOther.length ? "warn" : "ok") : "err",
+          text: parts.join(" "),
         });
-        if (error) throw error;
-
-        const res = data as SlotResult;
-
-        if (res.ok) {
-          setConfirming(null);
-          const removed = res.removed?.length ?? 0;
-          setMsg({
-            kind: "ok",
-            text:
-              `登録しました。` +
-              (removed > 0 ? `重なっていた予定 ${removed} 件を取り消し、登録者に知らせました。` : ""),
-          });
-          return;
-        }
-
-        if (res.reason === "blocked") {
-          const names = res.blocked_by
-            .map((b) => `${KIND_LABEL[b.kind]}「${b.title || "（名称なし）"}」${hhmm(b.starts_at)}〜${hhmm(b.ends_at)}`)
-            .join(" / ");
-          const hasClass = res.blocked_by.some((b) => b.kind === "class");
-          setConfirming(null);
-          setMsg({
-            kind: "err",
-            text: hasClass
-              ? `授業があります。この時間には登録できません。（${names}）`
-              : `すでに予定が入っています。先に入れたものが優先されます。（${names}）`,
-          });
-          return;
-        }
-
-        // 弱い予定がある。消してよいか尋ねる
-        setConfirming(res.will_remove);
       } catch (e) {
         const err = e as { code?: string; message?: string };
         setMsg({
@@ -287,7 +316,7 @@ export default function SchedulePage() {
         setBusy(false);
       }
     },
-    [kind, roomId, date, periodId, courseId, courseName, className, teacher, deptId, activityId, title, startAt, endAt],
+    [kind, chosen, date, periodId, courseId, courseName, className, teacher, deptId, activityId, title, startAt, endAt],
   );
 
   /* ---------------- 表示 ---------------- */
@@ -332,10 +361,12 @@ export default function SchedulePage() {
 
       {setupNeeded && (
         <div className="mb-3 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
-          <b>データベースの更新がまだです。</b>
+          <b>データベースの準備がまだ終わっていません。</b>
           <br />
-          Supabase の SQL Editor で <code className="font-mono">{setupNeeded}</code> を実行してください。
-          学科や課外活動の一覧は、それまで空のままになります。
+          学科・課外活動・イベントの表がまだ作られていないため、下の一覧は空のままです。
+          <br />
+          Supabase の SQL Editor で <code className="font-mono">supabase/setup.sql</code>{" "}
+          を貼り付けて実行すると、必要なものが一度にそろいます。
         </div>
       )}
 
@@ -350,7 +381,7 @@ export default function SchedulePage() {
               onClick={() => {
                 setKind(k);
                 setMsg(null);
-                setConfirming(null);
+                setPending(null);
               }}
               className={`rounded-xl py-2.5 text-sm font-bold transition ${
                 kind === k
@@ -377,41 +408,90 @@ export default function SchedulePage() {
           />
         </Field>
 
-        {/* ---- 教室 ---- */}
-        <Field label="教室">
+        {/* ---- 教室。まとめて同じ予定を入れられるよう、いくつでも選べる ---- */}
+        <Field label="教室（いくつでも選べます）">
           <div className="flex items-center gap-2">
             <input
               value={buildingCode}
-              onChange={(e) => {
-                setBuildingCode(e.target.value);
-                setRoomId(null);
-              }}
+              onChange={(e) => setBuildingCode(e.target.value)}
               inputMode="numeric"
               placeholder="23"
               className="w-20 rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-xs font-bold text-slate-500">号館</span>
-            <select
-              value={roomId ?? ""}
-              onChange={(e) => setRoomId(e.target.value ? Number(e.target.value) : null)}
-              className="min-w-0 flex-1 rounded-xl bg-slate-100 px-3 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">教室番号を選ぶ</option>
-              {roomsInBuilding.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.code}
-                </option>
-              ))}
-            </select>
+            <span className="ml-auto text-[11px] font-bold text-slate-600">
+              {roomIds.length > 0 ? `${roomIds.length}室を選択中` : "未選択"}
+            </span>
           </div>
+
           {buildingCode && roomsInBuilding.length === 0 && (
-            <p className="mt-1 text-[10px] text-amber-700">
-              この号館の教室が登録されていません
-            </p>
+            <p className="mt-1 text-[10px] text-amber-700">この号館の教室が登録されていません</p>
           )}
-          {room && (
-            <p className="mt-1 text-[11px] font-bold text-slate-700">
-              部屋名：{room.name || "（未登録）"}
+
+          {roomsInBuilding.length > 0 && (
+            <>
+              <div className="mt-1.5 flex gap-1.5">
+                <button
+                  onClick={() =>
+                    setRoomIds((prev) => [
+                      ...new Set([...prev, ...roomsInBuilding.map((r) => r.id)]),
+                    ])
+                  }
+                  className="flex-1 rounded-lg bg-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-300"
+                >
+                  この号館をすべて選ぶ（{roomsInBuilding.length}室）
+                </button>
+                <button
+                  onClick={() => setRoomIds([])}
+                  className="rounded-lg bg-white px-2 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm transition hover:bg-slate-100"
+                >
+                  全部外す
+                </button>
+              </div>
+
+              {/* 号館によっては百室を超えるので、この中で送れるようにする */}
+              <ul className="mt-1.5 max-h-52 overflow-y-auto rounded-xl bg-slate-50 p-1.5">
+                {roomsInBuilding.map((r) => {
+                  const on = roomIds.includes(r.id);
+                  return (
+                    <li key={r.id}>
+                      <button
+                        onClick={() =>
+                          setRoomIds((prev) =>
+                            on ? prev.filter((x) => x !== r.id) : [...prev, r.id],
+                          )
+                        }
+                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition ${
+                          on ? "bg-blue-600 text-white" : "hover:bg-white"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+                            on ? "bg-white text-blue-600" : "bg-white text-transparent ring-1 ring-slate-300"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <span className="w-14 shrink-0 text-xs font-bold">{r.code}</span>
+                        <span
+                          className={`min-w-0 truncate text-[11px] ${on ? "text-blue-100" : "text-slate-500"}`}
+                        >
+                          {r.name || "（部屋名なし）"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+
+          {chosen.length > 0 && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+              <b>選択中：</b>
+              {chosen
+                .map((r) => `${r.building_code}号館 ${r.code}${r.name ? `（${r.name}）` : ""}`)
+                .join(" ／ ")}
             </p>
           )}
         </Field>
@@ -460,10 +540,9 @@ export default function SchedulePage() {
                   </optgroup>
                 ))}
               </select>
-              {facs.length === 0 && (
-                <p className="mt-1 text-[10px] text-amber-700">
-                  学科がまだ登録されていません（003 の SQL を実行してください）
-                </p>
+              {/* 準備が済んでいないときは上の帯で伝えているので、ここでは繰り返さない */}
+              {!setupNeeded && facs.length === 0 && (
+                <p className="mt-1 text-[10px] text-amber-700">学科が登録されていません</p>
               )}
             </Field>
 
@@ -565,10 +644,8 @@ export default function SchedulePage() {
                     ))}
                   </select>
                 )}
-                {cats.length === 0 && (
-                  <p className="mt-1 text-[10px] text-amber-700">
-                    課外活動がまだ登録されていません（003 の SQL を実行してください）
-                  </p>
+                {!setupNeeded && cats.length === 0 && (
+                  <p className="mt-1 text-[10px] text-amber-700">課外活動が登録されていません</p>
                 )}
               </Field>
             )}
@@ -584,16 +661,26 @@ export default function SchedulePage() {
           </>
         )}
 
-        {/* ---- 確認 ---- */}
-        {confirming && (
+        {/* ---- 確認。教室ごとに、何が消えるのかを並べて一度だけ尋ねる ---- */}
+        {pending && (
           <div className="rounded-xl bg-amber-50 p-3">
             <p className="text-xs font-bold text-amber-900">
-              この時間には、すでに次の予定が入っています。
+              次の{pending.length}室には、すでに予定が入っています。
             </p>
-            <ul className="mt-1.5 flex flex-col gap-1">
-              {confirming.map((c) => (
-                <li key={c.id} className="text-[11px] text-amber-800">
-                  ・{KIND_LABEL[c.kind]}「{c.title || "（名称なし）"}」{hhmm(c.starts_at)}〜{hhmm(c.ends_at)}
+            <ul className="mt-1.5 flex flex-col gap-1.5">
+              {pending.map(({ room: rm, conflicts }) => (
+                <li key={rm.id} className="text-[11px] text-amber-800">
+                  <b>
+                    {rm.building_code}号館 {rm.code}
+                  </b>
+                  <ul className="mt-0.5 pl-3">
+                    {conflicts.map((c) => (
+                      <li key={c.id}>
+                        ・{KIND_LABEL[c.kind]}「{c.title || "（名称なし）"}」{hhmm(c.starts_at)}〜
+                        {hhmm(c.ends_at)}
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
@@ -603,14 +690,14 @@ export default function SchedulePage() {
             </p>
             <div className="mt-2 flex gap-2">
               <button
-                onClick={() => void submit(true)}
+                onClick={() => void submit(true, pending.map((p) => p.room))}
                 disabled={busy}
                 className="flex-1 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700 disabled:bg-slate-300"
               >
                 はい、取り消して登録する
               </button>
               <button
-                onClick={() => setConfirming(null)}
+                onClick={() => setPending(null)}
                 className="rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm"
               >
                 やめる
@@ -633,7 +720,7 @@ export default function SchedulePage() {
           </p>
         )}
 
-        {!confirming && (
+        {!pending && (
           <button
             onClick={() => void submit(false)}
             disabled={busy}
@@ -664,7 +751,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <main className="min-h-[100dvh] bg-slate-100 p-4">
+    // 本文は地図のために overflow-hidden。ここで送れるようにする
+    <main className="h-[100dvh] overflow-y-auto bg-slate-100 p-4">
       <div className={`mx-auto ${wide ? "max-w-lg" : "max-w-sm"} rounded-2xl bg-white p-5 shadow-lg`}>
         {children}
       </div>
