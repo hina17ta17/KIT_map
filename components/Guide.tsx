@@ -917,6 +917,31 @@ export default function Guide() {
         </a>
       )}
 
+      {/* 学内の情報。
+          ボタンの列の中に入れると、列の幅と高さに縛られて
+          下のほうが画面の外に出てしまう。上下を画面に留めた
+          別の引き出しにして、中身は必ず送れるようにする */}
+      {side && (
+        <div
+          className="absolute left-4 z-20 flex w-[min(21rem,calc(100vw-2rem))] flex-col rounded-2xl bg-white/95 p-3 shadow-2xl backdrop-blur"
+          style={{ top: "1rem", bottom: "1rem" }}
+        >
+          <div className="mb-2 flex shrink-0 items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500">学内の情報</span>
+            <button
+              onClick={() => setSide(false)}
+              aria-label="閉じる"
+              className="h-7 w-7 rounded-lg bg-slate-100 text-xs font-bold text-slate-600 transition hover:bg-slate-200"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <CampusPanel role={role} onNeedLogin={() => setLogin(true)} />
+          </div>
+        </div>
+      )}
+
       {/* 左上に縦に積む。重なりが起きないよう1つの列にまとめる */}
       <div className="absolute left-4 top-4 z-10 flex w-fit max-w-[16rem] flex-col items-start gap-2">
         <button
@@ -949,20 +974,6 @@ export default function Guide() {
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "opacity-0" : ""}`} />
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "-translate-y-[6px] -rotate-45" : ""}`} />
           </button>
-
-          {/* 中はカレンダーから始まる。狭いと日が押しにくいので広めに取り、
-              画面に収まらない分はこの中だけで送る */}
-          {side && (
-            <div
-              className="flex w-[min(20rem,calc(100vw-6rem))] flex-col rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur"
-              style={{ maxHeight: "calc(100dvh - 8rem)" }}
-            >
-              <div className="mb-2 shrink-0 text-[11px] font-bold text-slate-500">学内の情報</div>
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <CampusPanel role={role} onNeedLogin={() => setLogin(true)} />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
