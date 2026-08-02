@@ -41,6 +41,14 @@ type Conflict = {
   ends_at: string;
 };
 
+/** register_slots（まとめて登録）の返り値 */
+type BatchResult = {
+  registered: { room_id: number }[];
+  blocked: { room_id: number; blocked_by: Conflict[] }[];
+  confirm: { room_id: number; will_remove: Conflict[] }[];
+  removed: number;
+};
+
 const KIND_LABEL: Record<Kind, string> = {
   class: "授業",
   event: "イベント",
@@ -82,7 +90,8 @@ export default function SchedulePage() {
   const [courses, setCourses] = useState<Course[]>([]);
 
   /* 入力 */
-  const [buildingCode, setBuildingCode] = useState("");
+  /** 見ている号館。号館ごと、あるいは全号館を選べる */
+  const [buildingCodes, setBuildingCodes] = useState<string[]>([]);
   /** 選んだ教室。まとめて同じ予定を入れられるよう複数持つ */
   const [roomIds, setRoomIds] = useState<number[]>([]);
   const [periodId, setPeriodId] = useState<number | null>(null);
@@ -166,11 +175,17 @@ export default function SchedulePage() {
       .then(({ data }) => setCourses((data as Course[]) ?? []));
   }, [deptId]);
 
-  const roomsInBuilding = useMemo(() => {
-    const b = buildingCode.trim().replace(/号館$/, "");
-    if (!b) return [];
-    return rooms.filter((r) => r.building_code === b);
-  }, [rooms, buildingCode]);
+  /** 教室が登録されている号館。番号の小さい順に並べる */
+  const allBuildings = useMemo(() => {
+    const s = [...new Set(rooms.map((r) => r.building_code).filter(Boolean))];
+    return s.sort((a, b) => (Number(a) || 9999) - (Number(b) || 9999) || a.localeCompare(b, "ja"));
+  }, [rooms]);
+
+  /** いま選んでいる号館にある教室 */
+  const roomsInScope = useMemo(
+    () => (buildingCodes.length === 0 ? [] : rooms.filter((r) => buildingCodes.includes(r.building_code))),
+    [rooms, buildingCodes],
+  );
 
   const chosen = useMemo(
     () => roomIds.map((id) => rooms.find((r) => r.id === id)).filter((r): r is Room => !!r),
@@ -242,46 +257,49 @@ export default function SchedulePage() {
           return;
         }
 
-        let done = 0;
-        let removed = 0;
+        // 教室ごとに呼ぶと、全号館では千回を超える往復になる。
+        // まとめて渡し、向こうで順に入れてもらう
+        const { data, error } = await supabase.rpc("register_slots", {
+          p_kind: kind,
+          p_room_ids: list.map((r) => r.id),
+          p_date: date,
+          p_period_id: kind === "class" ? periodId : null,
+          p_starts: kind === "class" ? null : startAt,
+          p_ends: kind === "class" ? null : endAt,
+          p_course_id: kind === "class" ? useCourseId : null,
+          p_activity_id: kind === "activity" ? activityId : null,
+          p_title: title.trim(),
+          p_teacher: teacher.trim(),
+          p_force: force,
+        });
+        if (error) throw error;
+
+        const res = data as BatchResult;
+        const byId = new Map(list.map((r) => [r.id, r]));
+        const where = (id: number) => {
+          const r = byId.get(id);
+          return r ? `${r.building_code}号館 ${r.code}` : `教室${id}`;
+        };
+
+        const done = res.registered.length;
+        const removed = res.removed;
         const blockedByClass: string[] = [];
         const blockedOther: string[] = [];
-        const ask: { room: Room; conflicts: Conflict[] }[] = [];
 
-        for (const rm of list) {
-          const { data, error } = await supabase.rpc("register_slot", {
-            p_kind: kind,
-            p_room_id: rm.id,
-            p_date: date,
-            p_period_id: kind === "class" ? periodId : null,
-            p_starts: kind === "class" ? null : startAt,
-            p_ends: kind === "class" ? null : endAt,
-            p_course_id: kind === "class" ? useCourseId : null,
-            p_activity_id: kind === "activity" ? activityId : null,
-            p_title: title.trim(),
-            p_teacher: teacher.trim(),
-            p_force: force,
-          });
-          if (error) throw error;
-
-          const res = data as SlotResult;
-          const where = `${rm.building_code}号館 ${rm.code}`;
-
-          if (res.ok) {
-            done++;
-            removed += res.removed?.length ?? 0;
-          } else if (res.reason === "blocked") {
-            const names = res.blocked_by
-              .map((b) => `${KIND_LABEL[b.kind]}「${b.title || "（名称なし）"}」`)
-              .join("・");
-            if (res.blocked_by.some((b) => b.kind === "class")) blockedByClass.push(`${where}（${names}）`);
-            else blockedOther.push(`${where}（${names}）`);
-          } else {
-            ask.push({ room: rm, conflicts: res.will_remove });
-          }
+        for (const b of res.blocked) {
+          const names = b.blocked_by
+            .map((x) => `${KIND_LABEL[x.kind]}「${x.title || "（名称なし）"}」`)
+            .join("・");
+          if (b.blocked_by.some((x) => x.kind === "class"))
+            blockedByClass.push(`${where(b.room_id)}（${names}）`);
+          else blockedOther.push(`${where(b.room_id)}（${names}）`);
         }
 
         // 尋ねる相手が残っていれば、そこで一度止める
+        const ask = res.confirm
+          .map((c) => ({ room: byId.get(c.room_id), conflicts: c.will_remove }))
+          .filter((x): x is { room: Room; conflicts: Conflict[] } => !!x.room);
+
         if (ask.length > 0) {
           setPending(ask);
           if (done > 0) {
@@ -409,37 +427,69 @@ export default function SchedulePage() {
         </Field>
 
         {/* ---- 教室。まとめて同じ予定を入れられるよう、いくつでも選べる ---- */}
-        <Field label="教室（いくつでも選べます）">
-          <div className="flex items-center gap-2">
-            <input
-              value={buildingCode}
-              onChange={(e) => setBuildingCode(e.target.value)}
-              inputMode="numeric"
-              placeholder="23"
-              className="w-20 rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-xs font-bold text-slate-500">号館</span>
-            <span className="ml-auto text-[11px] font-bold text-slate-600">
+        <Field label="教室（号館ごと・全号館も選べます）">
+          {/* 号館を選ぶ。番号を打たなくても押すだけで選べるようにする */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold text-slate-500">号館</span>
+            <span className="text-[11px] font-bold text-slate-600">
               {roomIds.length > 0 ? `${roomIds.length}室を選択中` : "未選択"}
             </span>
           </div>
 
-          {buildingCode && roomsInBuilding.length === 0 && (
-            <p className="mt-1 text-[10px] text-amber-700">この号館の教室が登録されていません</p>
-          )}
+          <div className="mt-1 flex gap-1.5">
+            <button
+              onClick={() => setBuildingCodes(allBuildings)}
+              className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                buildingCodes.length === allBuildings.length && allBuildings.length > 0
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+              }`}
+            >
+              すべての号館（{allBuildings.length}棟・{rooms.length}室）
+            </button>
+            <button
+              onClick={() => {
+                setBuildingCodes([]);
+                setRoomIds([]);
+              }}
+              className="rounded-lg bg-white px-2 py-1.5 text-[11px] font-bold text-slate-500 shadow-sm transition hover:bg-slate-100"
+            >
+              解除
+            </button>
+          </div>
 
-          {roomsInBuilding.length > 0 && (
+          <div className="mt-1.5 flex max-h-28 flex-wrap gap-1 overflow-y-auto rounded-xl bg-slate-50 p-1.5">
+            {allBuildings.map((b) => {
+              const on = buildingCodes.includes(b);
+              return (
+                <button
+                  key={b}
+                  onClick={() =>
+                    setBuildingCodes((prev) =>
+                      on ? prev.filter((x) => x !== b) : [...prev, b],
+                    )
+                  }
+                  className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                    on ? "bg-blue-600 text-white" : "bg-white text-slate-600 shadow-sm hover:bg-slate-100"
+                  }`}
+                >
+                  {b}
+                </button>
+              );
+            })}
+            {allBuildings.length === 0 && (
+              <span className="p-1 text-[10px] text-amber-700">教室が登録されていません</span>
+            )}
+          </div>
+
+          {roomsInScope.length > 0 && (
             <>
               <div className="mt-1.5 flex gap-1.5">
                 <button
-                  onClick={() =>
-                    setRoomIds((prev) => [
-                      ...new Set([...prev, ...roomsInBuilding.map((r) => r.id)]),
-                    ])
-                  }
+                  onClick={() => setRoomIds(roomsInScope.map((r) => r.id))}
                   className="flex-1 rounded-lg bg-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-300"
                 >
-                  この号館をすべて選ぶ（{roomsInBuilding.length}室）
+                  選んだ号館の教室をすべて選ぶ（{roomsInScope.length}室）
                 </button>
                 <button
                   onClick={() => setRoomIds([])}
@@ -449,9 +499,10 @@ export default function SchedulePage() {
                 </button>
               </div>
 
-              {/* 号館によっては百室を超えるので、この中で送れるようにする */}
+              {/* 全号館だと千を超えるので、並べるのは先頭だけにする。
+                  「すべて選ぶ」は並べていない分も含める */}
               <ul className="mt-1.5 max-h-52 overflow-y-auto rounded-xl bg-slate-50 p-1.5">
-                {roomsInBuilding.map((r) => {
+                {roomsInScope.slice(0, 300).map((r) => {
                   const on = roomIds.includes(r.id);
                   return (
                     <li key={r.id}>
@@ -472,6 +523,13 @@ export default function SchedulePage() {
                         >
                           ✓
                         </span>
+                        {buildingCodes.length > 1 && (
+                          <span
+                            className={`w-10 shrink-0 text-[10px] ${on ? "text-blue-100" : "text-slate-400"}`}
+                          >
+                            {r.building_code}号
+                          </span>
+                        )}
                         <span className="w-14 shrink-0 text-xs font-bold">{r.code}</span>
                         <span
                           className={`min-w-0 truncate text-[11px] ${on ? "text-blue-100" : "text-slate-500"}`}
@@ -482,6 +540,11 @@ export default function SchedulePage() {
                     </li>
                   );
                 })}
+                {roomsInScope.length > 300 && (
+                  <li className="px-2 py-1.5 text-[10px] text-slate-500">
+                    ほか {roomsInScope.length - 300} 室（「すべて選ぶ」にはこれらも含まれます）
+                  </li>
+                )}
               </ul>
             </>
           )}
@@ -490,8 +553,16 @@ export default function SchedulePage() {
             <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
               <b>選択中：</b>
               {chosen
-                .map((r) => `${r.building_code}号館 ${r.code}${r.name ? `（${r.name}）` : ""}`)
+                .slice(0, 12)
+                .map((r) => `${r.building_code}号館 ${r.code}`)
                 .join(" ／ ")}
+              {chosen.length > 12 && ` ほか ${chosen.length - 12} 室`}
+            </p>
+          )}
+
+          {chosen.length >= 100 && (
+            <p className="mt-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[10px] leading-relaxed text-amber-800">
+              {chosen.length}室にまとめて登録します。数が多いので、日付と時間を確かめてください。
             </p>
           )}
         </Field>
