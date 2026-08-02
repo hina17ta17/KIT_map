@@ -172,7 +172,8 @@ export function search(data: AppData, query: string, limit = 8): SearchHit[] {
     if (best >= 0) {
       hits.push({
         buildingId: r.buildingId,
-        title: `${bn} ${r.code || r.name}`,
+        // 部屋番号は "23-220" のように号館まで含むので、号館名を重ねない
+        title: r.code ? `${r.code} ${r.name}`.trim() : `${bn} ${r.name}`,
         sub: floorText(r.floor),
         // 部屋は建物より少し後ろに出す
         score: best + 0.5,

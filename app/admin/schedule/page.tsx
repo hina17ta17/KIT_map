@@ -278,7 +278,7 @@ export default function SchedulePage() {
         const byId = new Map(list.map((r) => [r.id, r]));
         const where = (id: number) => {
           const r = byId.get(id);
-          return r ? `${r.building_code}号館 ${r.code}` : `教室${id}`;
+          return r ? `${r.code}` : `教室${id}`;
         };
 
         const done = res.registered.length;
@@ -554,7 +554,7 @@ export default function SchedulePage() {
               <b>選択中：</b>
               {chosen
                 .slice(0, 12)
-                .map((r) => `${r.building_code}号館 ${r.code}`)
+                .map((r) => `${r.code}`)
                 .join(" ／ ")}
               {chosen.length > 12 && ` ほか ${chosen.length - 12} 室`}
             </p>
@@ -741,9 +741,7 @@ export default function SchedulePage() {
             <ul className="mt-1.5 flex flex-col gap-1.5">
               {pending.map(({ room: rm, conflicts }) => (
                 <li key={rm.id} className="text-[11px] text-amber-800">
-                  <b>
-                    {rm.building_code}号館 {rm.code}
-                  </b>
+                  <b>{rm.code}</b>
                   <ul className="mt-0.5 pl-3">
                     {conflicts.map((c) => (
                       <li key={c.id}>

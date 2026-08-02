@@ -503,7 +503,7 @@ function ByDepartment({ date, periodId }: { date: Date; periodId: number }) {
                   <span>{r.courses?.teacher || r.teacher || "担当未定"}</span>
                 </div>
                 <div className="mt-1 text-[11px] font-bold text-slate-700">
-                  {r.rooms ? `${r.rooms.building_code}号館 ${r.rooms.code}` : "教室未定"}
+                  {r.rooms ? `${r.rooms.code}` : "教室未定"}
                   <span className="ml-2 font-normal text-slate-500">
                     {hhmm(r.starts_at)}〜{hhmm(r.ends_at)}
                   </span>
@@ -617,7 +617,7 @@ function ByActivity({ date }: { date: Date }) {
                     {hhmm(r.starts_at)}〜{hhmm(r.ends_at)}
                   </div>
                   <div className="mt-0.5 text-[11px] font-bold text-slate-700">
-                    {r.rooms ? `${r.rooms.building_code}号館 ${r.rooms.code}` : "教室未定"}
+                    {r.rooms ? `${r.rooms.code}` : "教室未定"}
                     {r.rooms?.name ? (
                       <span className="ml-1 font-normal text-slate-500">{r.rooms.name}</span>
                     ) : null}
@@ -767,9 +767,8 @@ function FreeRooms({ date, periods }: { date: Date; periods: Period[] }) {
                   key={r.room_id}
                   className="flex items-baseline justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2"
                 >
-                  <span className="text-xs font-bold text-emerald-900">
-                    {r.building_code}号館 {r.room_code}
-                  </span>
+                  {/* 番号がそれだけで号館まで表すので、重ねて書かない */}
+                  <span className="text-xs font-bold text-emerald-900">{r.room_code}</span>
                   <span className="min-w-0 truncate text-[10px] text-emerald-700">
                     {r.room_name}
                   </span>
