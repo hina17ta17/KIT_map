@@ -139,6 +139,8 @@ export default function Guide() {
   const [favs, setFavs] = useState<string[]>([]);
   /** お気に入りを選ぶ画面を開いているか */
   const [favPanel, setFavPanel] = useState(false);
+  /** 地図のラベルで最初に押した建物。次に押した建物が目的地になる */
+  const [pickedFrom, setPickedFrom] = useState<SearchHit | null>(null);
   /** 一覧をスワイプで開閉するための、指を置いた位置 */
   const touchY = useRef<number | null>(null);
   /** ログインしている人の権限。未ログインなら null */
@@ -789,6 +791,7 @@ export default function Guide() {
       );
   }, [data]);
 
+
   /** お気に入りだけを、登録した順に並べたもの */
   const favListed = useMemo(
     () =>
@@ -855,6 +858,42 @@ export default function Guide() {
       );
     },
     [focusId],
+  );
+
+  /**
+   * 地図のラベルを押したとき。
+   *
+   * 一つ目 … 出発地にする（そこへ寄る）
+   * 同じもの … 取り消して、縮尺を戻す
+   * 二つ目 … 目的地にして案内を始める
+   */
+  const tapLabel = useCallback(
+    (id: string, label: string, ring: Position[]) => {
+      const hit: SearchHit = { buildingId: id, title: label, sub: "", score: 0 };
+
+      if (!pickedFrom) {
+        setPickedFrom(hit);
+        setTrip(null);
+        setArrived(false);
+        focusBuilding(ring, id);
+        return;
+      }
+
+      if (pickedFrom.buildingId === id) {
+        // 同じものをもう一度。選び直せるように取り消す
+        setPickedFrom(null);
+        focusBuilding(ring, id); // 二度目なので縮尺が戻る
+        return;
+      }
+
+      setTrip({ origin: { kind: "place", hit: pickedFrom }, dest: hit });
+      setOrigin({ kind: "place", hit: pickedFrom });
+      setDest(hit);
+      setArrived(false);
+      setPickedFrom(null);
+      setFocusId(id);
+    },
+    [pickedFrom, focusBuilding],
   );
 
   const view = useMemo(() => {
@@ -1078,17 +1117,23 @@ export default function Guide() {
             const cat = categoryOf(f.properties.category);
             const label = f.properties.name || f.properties.code;
             if (!label) return null;
+            const from = pickedFrom?.buildingId === f.properties.tempId;
             return (
-              // ラベルを押すとその建物へ寄る。
+              // 一つ目を押すと出発地、二つ目を押すと目的地になって案内が始まる。
               // 親は pointer-events-none なので、ここだけ auto に戻す
               <button
                 key={f.properties.tempId}
-                onClick={() => focusBuilding(f.geometry.coordinates[0], f.properties.tempId)}
+                onClick={() => tapLabel(f.properties.tempId, label, f.geometry.coordinates[0])}
                 className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm transition active:scale-95 ${
-                  on ? "bg-orange-500 text-white" : "bg-white/85 text-slate-800 hover:bg-white"
+                  from
+                    ? "bg-blue-600 text-white ring-2 ring-blue-300"
+                    : on
+                      ? "bg-orange-500 text-white"
+                      : "bg-white/85 text-slate-800 hover:bg-white"
                 }`}
                 style={{ left: c.x, top: c.y, borderColor: cat.lineColor }}
               >
+                {from && <span className="mr-1 opacity-80">出発</span>}
                 {label}
               </button>
             );
@@ -1171,13 +1216,11 @@ export default function Guide() {
         {/* お気に入り。案内と学内の情報のあいだに置く */}
         <button
           onClick={() => setFavPanel(true)}
-          className="flex items-center gap-1.5 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          aria-label="お気に入り"
+          title="お気に入り"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-lg shadow-md backdrop-blur transition hover:bg-white active:scale-95"
         >
           <span className={favs.length ? "text-amber-500" : "text-slate-300"}>★</span>
-          お気に入り
-          {favs.length > 0 && (
-            <span className="text-xs font-bold text-slate-400">{favs.length}</span>
-          )}
         </button>
 
         {/* 学内の情報。四角いボタンを押すと横に開く */}
@@ -1192,6 +1235,24 @@ export default function Guide() {
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "-translate-y-[6px] -rotate-45" : ""}`} />
           </button>
         </div>
+
+        {/* 出発地を押した直後。次に何をすればよいかを出す */}
+        {pickedFrom && (
+          <div className="flex max-w-[16rem] items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-[11px] font-bold text-white shadow-md">
+            <span className="min-w-0">
+              <span className="block truncate">出発：{pickedFrom.title}</span>
+              <span className="block font-normal text-blue-100">
+                次に目的地のラベルを押してください
+              </span>
+            </span>
+            <button
+              onClick={() => setPickedFrom(null)}
+              className="ml-auto shrink-0 rounded-full bg-blue-500 px-2 py-1 text-[10px] font-bold"
+            >
+              やめる
+            </button>
+          </div>
+        )}
 
         {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
         {geoState !== "idle" && (
@@ -1629,6 +1690,7 @@ export default function Guide() {
                 setTrip(null);
                 setArrived(false);
                 setFocusId(null);
+                setPickedFrom(null);
               }}
               className="shrink-0 rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-95"
             >
