@@ -92,9 +92,10 @@ export default function AdminPage() {
     <Shell wide>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-bold text-slate-900">承認・権限の管理</h1>
-        <Link href="/" className="text-xs font-semibold text-slate-500 hover:text-slate-800">
-          地図へ戻る
-        </Link>
+        <div className="flex gap-3 text-xs font-semibold text-slate-500">
+          <Link href="/admin/rooms" className="hover:text-slate-800">教室の登録</Link>
+          <Link href="/" className="hover:text-slate-800">地図へ</Link>
+        </div>
       </div>
 
       {msg && (
