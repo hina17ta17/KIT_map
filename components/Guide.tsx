@@ -11,14 +11,14 @@
  * 建物の判別は検索と、選択中のハイライトで行う。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Map as MlMap, NavigationControl, ScaleControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
 import { BASES, GSI_ATTRIBUTION, INITIAL_VIEW } from "@/lib/gsi";
 import { categoryOf, type CheckpointFeature } from "@/lib/features";
 import { loadAppData, loadRooms, search, type AppData, type SearchHit } from "@/lib/appdata";
-import { canViewCampusInfo, type Role } from "@/lib/auth";
+import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
 import { buildGraph, buildSteps, findPath, nearestNode } from "@/lib/route";
 import { metersBetween } from "@/lib/geo";
 
@@ -29,6 +29,35 @@ const ACC_ROUGH = 50;
 const SNAP_MAX = 50;
 /** 起動時の縮尺。建物を押して寄ったあと、ここへ戻す */
 const HOME_ZOOM = 17;
+
+/** 右上の狭い場所に出す用の、短い権限名 */
+const SHORT_ROLE: Record<Role, string> = {
+  pending: "承認待ち",
+  student: "学生・教職員",
+  admin_l1: "管理者Lv1",
+  admin_l2: "管理者Lv2",
+  admin_l3: "管理者Lv3",
+};
+
+/**
+ * 描く前に動かしたい処理。
+ *
+ * サーバ側には画面が無いので useLayoutEffect は使えない。
+ * そのまま書くと警告が出るため、サーバでは useEffect に差し替える。
+ */
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * 通信せずにログイン済みかを見分ける。
+ *
+ * ログイン状態は `sb-<プロジェクト>-auth-token` という名前で Cookie に入る。
+ * 中身は読まない。有無だけで、タイトル画面を出すかどうかを決める。
+ * 本当に入れているかは、あとから通信で確かめる。
+ */
+function hasSessionCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return /(?:^|;\s*)sb-[^=;]*auth-token[^=;]*=/.test(document.cookie);
+}
 
 type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
@@ -62,6 +91,16 @@ export default function Guide() {
     });
   }, []);
 
+  /**
+   * ログイン済みなら、タイトル画面を出さずに地図から始める。
+   *
+   * 毎回見せられるのは、入り直すたびに待たされるのと同じ。
+   * 描く前に決めるので、一瞬ちらつくこともない。
+   */
+  useBeforePaint(() => {
+    if (hasSessionCookie()) setSplash("done");
+  }, []);
+
   /** 少し見せてから自動で開く。触れば即座に開く */
   useEffect(() => {
     const t = window.setTimeout(closeSplash, 900);
@@ -79,6 +118,8 @@ export default function Guide() {
   const touchY = useRef<number | null>(null);
   /** ログインしている人の権限。未ログインなら null */
   const [role, setRole] = useState<Role | null>(null);
+  /** ログインしている人のメールアドレス。未ログインなら null */
+  const [email, setEmail] = useState<string | null>(null);
   /** 経路検索のパネルを開いているか */
   const [panel, setPanel] = useState(false);
   const [origin, setOrigin] = useState<Origin>({ kind: "me" });
@@ -194,6 +235,7 @@ export default function Guide() {
         const supabase = createClient();
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return;
+        setEmail(u.user.email ?? null);
 
         const { data: p } = await supabase
           .from("profiles")
@@ -515,9 +557,10 @@ export default function Guide() {
 
       if (focusId === id) {
         setFocusId(null);
-        // 回したり傾けたりしていても、まっすぐな最初の向きへ戻す
+        // 中心は動かさず、縮尺だけ戻す。
+        // 決まった場所へ引き戻すと、いま見ていた建物が画面から消えて
+        // どこを見ていたか分からなくなる。押した建物を真ん中に置いたまま引く。
         map.easeTo({
-          center: INITIAL_VIEW.center,
           zoom: HOME_ZOOM,
           bearing: 0,
           pitch: 0,
@@ -701,6 +744,32 @@ export default function Guide() {
             );
           })}
         </div>
+      )}
+
+      {/* 右上に、いま誰で入っているかを出す。押すと自分の状態と
+          ログアウトを見られる画面へ行く */}
+      {email && (
+        <a
+          href="/login"
+          className="absolute right-4 top-4 z-10 flex max-w-[11rem] items-center gap-2 rounded-full bg-white/95 py-1.5 pl-2 pr-3 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          title={`${email}（${ROLE_LABEL[role ?? "pending"]}）`}
+        >
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
+              canViewCampusInfo(role) ? "bg-blue-600" : "bg-amber-500"
+            }`}
+          >
+            {email.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[11px] font-bold leading-tight text-slate-800">
+              {email}
+            </span>
+            <span className="block truncate text-[9px] leading-tight text-slate-500">
+              {SHORT_ROLE[role ?? "pending"]}でログイン中
+            </span>
+          </span>
+        </a>
       )}
 
       {/* 左上に縦に積む。重なりが起きないよう1つの列にまとめる */}
