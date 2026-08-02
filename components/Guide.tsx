@@ -17,7 +17,14 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
 import { BASES, GSI_ATTRIBUTION, INITIAL_VIEW } from "@/lib/gsi";
 import { categoryOf, type CheckpointFeature } from "@/lib/features";
-import { loadAppData, loadRooms, search, type AppData, type SearchHit } from "@/lib/appdata";
+import {
+  loadAppData,
+  loadRooms,
+  matchesQuery,
+  search,
+  type AppData,
+  type SearchHit,
+} from "@/lib/appdata";
 import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
 import { buildGraph, buildSteps, findBestPath, nearestNode } from "@/lib/route";
 import CampusPanel from "./CampusPanel";
@@ -30,6 +37,18 @@ const ACC_ROUGH = 50;
 const SNAP_MAX = 50;
 /** 起動時の縮尺。建物を押して寄ったあと、ここへ戻す */
 const HOME_ZOOM = 17;
+
+/** お気に入りを覚えておく名前 */
+const FAV_KEY = "kitmap.favorites";
+
+/**
+ * 起動時に画面へ収める場所。
+ *
+ * 地図の中心と画面の中心は一致しない。上にボタン、下に一覧の帯が
+ * 重なっているぶん、中心を置いただけでは真ん中に見えない。
+ * この二つを枠に収めるよう指示して、確実に間へ入れる。
+ */
+const HOME_FRAME = ["1号館", "金沢工業大学前バス停"];
 
 /** 画面の上での名前の置き場所。左上を起点にした四角 */
 type LabelBox = { x: number; y: number; w: number; h: number };
@@ -117,6 +136,10 @@ export default function Guide() {
   const [focusId, setFocusId] = useState<string | null>(null);
   /** 建物一覧を開いているか */
   const [listOpen, setListOpen] = useState(false);
+  /** お気に入りの建物（tempId）。この端末に覚えさせる */
+  const [favs, setFavs] = useState<string[]>([]);
+  /** お気に入りを選ぶ画面を開いているか */
+  const [favPanel, setFavPanel] = useState(false);
   /** 一覧をスワイプで開閉するための、指を置いた位置 */
   const touchY = useRef<number | null>(null);
   /** ログインしている人の権限。未ログインなら null */
@@ -246,6 +269,28 @@ export default function Guide() {
 
   useEffect(() => {
     void loadAppData().then(setData);
+  }, []);
+
+  /* お気に入りは端末に覚えさせる。ログインしなくても使えるようにするため */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FAV_KEY);
+      if (raw) setFavs(JSON.parse(raw) as string[]);
+    } catch {
+      // 壊れていたら無いものとして始める
+    }
+  }, []);
+
+  const toggleFav = useCallback((id: string) => {
+    setFavs((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      } catch {
+        // 保存できなくても、この画面では使えるようにしておく
+      }
+      return next;
+    });
   }, []);
 
   /**
@@ -510,6 +555,45 @@ export default function Guide() {
     }
   }, [fix]);
 
+  /**
+   * 起動したら、1号館と金沢工業大学前バス停の両方が入るように枠を合わせる。
+   *
+   * 一度だけ。現在地が取れたり案内を始めたりしたら、そちらを優先する。
+   * 上下に重なるボタンと帯のぶんだけ余白を取り、その内側の真ん中に入れる。
+   */
+  const framed = useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !data || framed.current || fix || trip) return;
+
+    const rings = HOME_FRAME.map(
+      (n) => data.buildings.features.find((f) => f.properties.name === n)?.geometry.coordinates[0],
+    ).filter(Boolean) as Position[][];
+    if (rings.length < HOME_FRAME.length) return; // 片方でも無ければ触らない
+
+    framed.current = true;
+    let w = Infinity,
+      s = Infinity,
+      e = -Infinity,
+      n = -Infinity;
+    for (const ring of rings) {
+      for (const [lon, lat] of ring) {
+        if (lon < w) w = lon;
+        if (lon > e) e = lon;
+        if (lat < s) s = lat;
+        if (lat > n) n = lat;
+      }
+    }
+    map.fitBounds(
+      [
+        [w, s],
+        [e, n],
+      ],
+      // 上はボタン、下は建物一覧の帯。その内側の真ん中に来るようにする
+      { padding: { top: 150, bottom: 130, left: 60, right: 60 }, maxZoom: 18, duration: 0 },
+    );
+  }, [ready, data, fix, trip]);
+
   /* ---------------- 圏内判定 ---------------- */
 
   const inCampus = useMemo(() => {
@@ -703,6 +787,27 @@ export default function Guide() {
           a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2].localeCompare(b.key[2], "ja"),
       );
   }, [data]);
+
+  /** お気に入りだけを、登録した順に並べたもの */
+  const favListed = useMemo(
+    () =>
+      favs
+        .map((id) => listed.find((x) => x.f.properties.tempId === id))
+        .filter((x): x is (typeof listed)[number] => !!x),
+    [favs, listed],
+  );
+
+  /** 案内の入力欄に出すお気に入り */
+  const favHits = useMemo<SearchHit[]>(
+    () =>
+      favListed.map(({ f, label }) => ({
+        buildingId: f.properties.tempId,
+        title: label,
+        sub: "",
+        score: -1,
+      })),
+    [favListed],
+  );
 
   /**
    * 建物へ寄せる。押すたびに寄る／戻るが入れ替わる。
@@ -1062,6 +1167,18 @@ export default function Guide() {
           案内
         </button>
 
+        {/* お気に入り。案内と学内の情報のあいだに置く */}
+        <button
+          onClick={() => setFavPanel(true)}
+          className="flex items-center gap-1.5 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+        >
+          <span className={favs.length ? "text-amber-500" : "text-slate-300"}>★</span>
+          お気に入り
+          {favs.length > 0 && (
+            <span className="text-xs font-bold text-slate-400">{favs.length}</span>
+          )}
+        </button>
+
         {/* 学内の情報。四角いボタンを押すと横に開く */}
         <div className="flex items-start gap-2">
           <button
@@ -1170,6 +1287,51 @@ export default function Guide() {
         </div>
       )}
 
+      {/* お気に入りを選ぶ。ここで付けたものが、案内の候補と一覧の先頭に出る */}
+      {favPanel && (
+        <div className="absolute inset-0 z-30 flex items-start justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
+          <div className="mt-4 flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col rounded-2xl bg-white p-4 shadow-2xl">
+            <div className="mb-2 flex shrink-0 items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">お気に入り</h2>
+              <button
+                onClick={() => setFavPanel(false)}
+                className="rounded-full px-3 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
+              >
+                閉じる
+              </button>
+            </div>
+            <p className="mb-2 shrink-0 text-[11px] leading-relaxed text-slate-500">
+              よく行く場所に★を付けると、案内の入力欄と建物一覧のいちばん上に出ます。
+              {favs.length > 0 && <span className="ml-1 font-bold text-slate-700">{favs.length}件</span>}
+            </p>
+            <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {listed.map(({ f, label }) => {
+                const on = favs.includes(f.properties.tempId);
+                return (
+                  <li key={f.properties.tempId}>
+                    <button
+                      onClick={() => toggleFav(f.properties.tempId)}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition ${
+                        on ? "bg-amber-50" : "hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className={`text-lg ${on ? "text-amber-500" : "text-slate-300"}`}>★</span>
+                      <span
+                        className={`min-w-0 truncate text-sm ${
+                          on ? "font-bold text-slate-900" : "text-slate-700"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* 建物一覧。下からせり上がって広がる */}
       {listed.length > 0 && (
         <div
@@ -1217,6 +1379,60 @@ export default function Guide() {
             style={{ opacity: listOpen ? 1 : 0, transition: "opacity 200ms" }}
           >
             <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+              {/* お気に入りがあれば、いちばん上にまとめて出す */}
+              {favListed.length > 0 && (
+                <li className="col-span-full pb-1 text-[10px] font-bold text-amber-600">
+                  ★ お気に入り
+                </li>
+              )}
+              {favListed.map(({ f, label }) => {
+                const on = focusId === f.properties.tempId;
+                return (
+                  <li key={`fav-${f.properties.tempId}`}>
+                    <div
+                      className={`flex overflow-hidden rounded-lg ring-1 ${
+                        on ? "bg-orange-500 ring-orange-500" : "bg-amber-50 ring-amber-200"
+                      }`}
+                    >
+                      <button
+                        onClick={() =>
+                          focusBuilding(f.geometry.coordinates[0], f.properties.tempId)
+                        }
+                        className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-[12px] font-medium transition ${
+                          on ? "text-white" : "text-slate-800 hover:bg-amber-100"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const d = {
+                            buildingId: f.properties.tempId,
+                            title: label,
+                            sub: "",
+                            score: 0,
+                          };
+                          setOrigin({ kind: "me" });
+                          setDest(d);
+                          setTrip({ origin: { kind: "me" }, dest: d });
+                          setArrived(false);
+                          setFocusId(f.properties.tempId);
+                          setListOpen(false);
+                          startWatch();
+                        }}
+                        className={`shrink-0 px-2.5 text-[11px] font-bold transition ${
+                          on
+                            ? "bg-orange-600 text-white hover:bg-orange-700"
+                            : "bg-amber-200 text-amber-900 hover:bg-blue-600 hover:text-white"
+                        }`}
+                      >
+                        案内
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+
               {listed.map(({ f, label, key }, i) => {
                 const on = focusId === f.properties.tempId;
                 // 区切りが変わったところに見出しを挟む。
@@ -1350,6 +1566,7 @@ export default function Guide() {
               allowMe
               onMe={() => setOrigin({ kind: "me" })}
               onPick={(h) => setOrigin({ kind: "place", hit: h })}
+              favs={favHits}
             />
             <div className="h-2" />
             <Field
@@ -1357,6 +1574,7 @@ export default function Guide() {
               data={data}
               value={dest?.title ?? ""}
               onPick={(h) => setDest(h)}
+              favs={favHits}
             />
 
             {/* 教室は承認された人だけが見られる。未ログインには理由を伝える */}
@@ -1456,6 +1674,7 @@ function Field({
   allowMe,
   onMe,
   onPick,
+  favs,
 }: {
   label: string;
   data: AppData;
@@ -1463,10 +1682,22 @@ function Field({
   allowMe?: boolean;
   onMe?: () => void;
   onPick: (h: SearchHit) => void;
+  favs: SearchHit[];
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const hits = useMemo(() => (q ? search(data, q) : []), [data, q]);
+
+  /**
+   * 出すお気に入り。
+   *
+   * 何も打っていないうちは全部出す。打ち始めたら、その語に当たるものだけ残す。
+   * 当たらないお気に入りが居座ると、探しているものが埋もれるため。
+   */
+  const shownFavs = useMemo(
+    () => favs.filter((f) => matchesQuery(f.title, q)),
+    [favs, q],
+  );
 
   return (
     <div>
@@ -1486,6 +1717,7 @@ function Field({
       />
       {open && (
         <ul className="mt-1 max-h-48 overflow-y-auto rounded-xl bg-white shadow-lg ring-1 ring-slate-200">
+          {/* 出発地では「現在地」を必ず先頭に。お気に入りはその下 */}
           {allowMe && (
             <li>
               <button
@@ -1498,6 +1730,28 @@ function Field({
                 現在地を使う
               </button>
             </li>
+          )}
+          {shownFavs.length > 0 && (
+            <li className="bg-amber-50 px-4 py-1 text-[10px] font-bold text-amber-700">
+              ★ お気に入り
+            </li>
+          )}
+          {shownFavs.map((h) => (
+            <li key={`fav-${h.buildingId}`}>
+              <button
+                onClick={() => {
+                  onPick(h);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-amber-50"
+              >
+                <span className="text-amber-500">★</span>
+                <span className="font-semibold text-slate-900">{h.title}</span>
+              </button>
+            </li>
+          ))}
+          {shownFavs.length > 0 && hits.length > 0 && (
+            <li className="border-t border-slate-100" />
           )}
           {hits.map((h, i) => (
             <li key={`${h.buildingId}-${i}`}>

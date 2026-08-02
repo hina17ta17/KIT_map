@@ -121,6 +121,18 @@ function normalize(s: string): string {
 }
 
 /**
+ * 入力した語がその名前に当たるか。
+ *
+ * 検索一覧と同じ当たり方で、お気に入りの絞り込みにも使う。
+ * 別々に書くと、片方だけ出る／消えるという食い違いが起きる。
+ */
+export function matchesQuery(text: string, query: string): boolean {
+  const q = normalize(query);
+  if (!q) return true; // 何も入れていないうちは全部見せる
+  return normalize(text).includes(q);
+}
+
+/**
  * 建物名・号館番号・部屋番号から目的地を探す。
  *
  * 完全一致 → 前方一致 → 部分一致 の順に並べる。
