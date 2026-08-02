@@ -514,19 +514,12 @@ export default function Guide() {
 
   const inCampus = useMemo(() => {
     if (!data || !fix) return null;
-    const poly = data.campus.features[0]?.geometry.coordinates[0];
-    if (!poly) return null;
-    let ins = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [xi, yi] = poly[i];
-      const [xj, yj] = poly[j];
-      if (
-        yi > fix.pos[1] !== yj > fix.pos[1] &&
-        fix.pos[0] < ((xj - xi) * (fix.pos[1] - yi)) / (yj - yi) + xi
-      )
-        ins = !ins;
-    }
-    return ins;
+    // 敷地は一面とはかぎらない。どれかに入っていれば圏内とする
+    const polys = data.campus.features
+      .map((f) => f.geometry.coordinates[0])
+      .filter((p) => p && p.length > 2);
+    if (polys.length === 0) return null;
+    return polys.some((poly) => inRing(poly, fix.pos));
   }, [data, fix]);
 
   /* ---------------- 経路 ---------------- */
@@ -695,7 +688,7 @@ export default function Guide() {
         label: f.properties.name || (f.properties.code ? `${f.properties.code}号館` : ""),
         key: orderKey(f.properties.name ?? "", f.properties.code ?? ""),
       }))
-      .filter((x) => x.label)
+      .filter((x) => x.label && !HIDDEN_NAMES.has(x.f.properties.name ?? ""))
       .sort(
         (a, b) =>
           a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2].localeCompare(b.key[2], "ja"),
@@ -779,8 +772,17 @@ export default function Guide() {
         c: p(centroid(f.geometry.coordinates[0])),
         text: f.properties.name || f.properties.code || "",
       }))
-      // 画面の外は判定にも描画にも要らない。少しはみ出す分だけ余裕を持たせる
-      .filter((x) => x.text && x.c.x > -80 && x.c.y > -40 && x.c.x < W + 80 && x.c.y < H + 40)
+      // 画面の外は判定にも描画にも要らない。少しはみ出す分だけ余裕を持たせる。
+      // 出さないと決めた建物も、ここで落とす
+      .filter(
+        (x) =>
+          x.text &&
+          !HIDDEN_NAMES.has(x.f.properties.name ?? "") &&
+          x.c.x > -80 &&
+          x.c.y > -40 &&
+          x.c.x < W + 80 &&
+          x.c.y < H + 40,
+      )
       .sort((a, b) => {
         // 選んでいる建物と経路の両端は、何を押したか分からなくなるので必ず出す
         const ah = highlight.has(a.f.properties.tempId) ? 1 : 0;
@@ -1511,6 +1513,30 @@ const TAIL_ORDER = [
   "グラウンド",
   "金沢工業大学前バス停",
 ];
+
+/**
+ * 点が輪の中にあるか。辺との交差数が奇数なら中にいる。
+ * 敷地が複数あるので、面ごとにこれで確かめる。
+ */
+function inRing(poly: Position[], at: Position): boolean {
+  let ins = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > at[1] !== yj > at[1] && at[0] < ((xj - xi) * (at[1] - yi)) / (yj - yi) + xi) {
+      ins = !ins;
+    }
+  }
+  return ins;
+}
+
+/**
+ * 地図の名前にも一覧にも出さない建物。
+ *
+ * データには残すので、経路の目的地には指定できるし、検索でも見つかる。
+ * 画面に出すと、これまでの並びや見え方が変わってしまうため出さない。
+ */
+const HIDDEN_NAMES = new Set(["野々市工大前駅", "バス停"]);
 
 /** 全角半角の括弧ゆれを吸収して比べる */
 const plain = (s: string) => s.replace(/[（）()\s]/g, "");
