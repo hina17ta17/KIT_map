@@ -17,7 +17,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
 import { BASES, GSI_ATTRIBUTION, INITIAL_VIEW } from "@/lib/gsi";
 import { categoryOf, type CheckpointFeature } from "@/lib/features";
-import { loadAppData, search, type AppData, type SearchHit } from "@/lib/appdata";
+import { loadAppData, loadRooms, search, type AppData, type SearchHit } from "@/lib/appdata";
+import { canViewCampusInfo, type Role } from "@/lib/auth";
 import { buildGraph, buildSteps, findPath, nearestNode } from "@/lib/route";
 import { metersBetween } from "@/lib/geo";
 
@@ -56,6 +57,8 @@ export default function Guide() {
   const [focusId, setFocusId] = useState<string | null>(null);
   /** 建物一覧を開いているか */
   const [listOpen, setListOpen] = useState(false);
+  /** ログインしている人の権限。未ログインなら null */
+  const [role, setRole] = useState<Role | null>(null);
   /** 経路検索のパネルを開いているか */
   const [panel, setPanel] = useState(false);
   const [origin, setOrigin] = useState<Origin>({ kind: "me" });
@@ -121,6 +124,39 @@ export default function Guide() {
 
   useEffect(() => {
     void loadAppData().then(setData);
+  }, []);
+
+  /**
+   * ログイン状態と教室。
+   *
+   * 教室（rooms）は承認された人だけが読める。
+   * 未ログインでは RLS が空を返すので、検索候補にも出てこない。
+   */
+  useEffect(() => {
+    void (async () => {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!url) return;
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user) return;
+
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", u.user.id)
+          .single();
+        const r = (p?.role as Role) ?? null;
+        setRole(r);
+        if (!canViewCampusInfo(r)) return;
+
+        const rooms = await loadRooms();
+        setData((prev) => (prev ? { ...prev, rooms } : prev));
+      } catch {
+        // 未設定・未接続なら地図だけで動く
+      }
+    })();
   }, []);
 
   /* ---------------- 現在地 ---------------- */
@@ -259,16 +295,18 @@ export default function Guide() {
 
     /* 起点 */
     let startId: string | null = null;
+    let fromGate = false;
     if (trip.origin.kind === "me") {
       if (fix && inCampus !== false) startId = nearestNode(graph, fix.pos, SNAP_MAX)?.id ?? null;
+      // 現在地がまだ取れていなくても案内は出す。門を起点にして、そう伝える
       if (!startId) {
-        return {
-          error:
-            fix == null
-              ? ("現在地が取れていません。出発地を場所で指定してください" as const)
-              : ("現在地の近くに経路がありません。出発地を場所で指定してください" as const),
-        };
+        const gate = (data.checkpoints.features as CheckpointFeature[]).find(
+          (c) => c.properties.kind === "gate",
+        );
+        startId = gate?.properties.id ?? null;
+        fromGate = true;
       }
+      if (!startId) return { error: "経路の起点が見つかりません" as const };
     } else {
       const ents = entrancesOf(trip.origin.hit.buildingId);
       if (ents.length === 0) return { error: "出発地の入口が登録されていません" as const };
@@ -287,7 +325,7 @@ export default function Guide() {
     if (!path) return { error: "経路が見つかりませんでした" as const };
 
     const { steps, meters, minutes } = buildSteps(graph, path, data, trip.dest.title);
-    return { path, steps, meters, minutes, goal, startId };
+    return { path, steps, meters, minutes, goal, startId, fromGate };
   }, [data, graph, trip, fix, inCampus, entrancesOf]);
 
   /* ---------------- 到着判定 ---------------- */
@@ -514,29 +552,30 @@ export default function Guide() {
         </div>
       )}
 
-      {/* 左上：現在地 */}
-      <button
-        onClick={startWatch}
-        className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
-      >
-        <span
-          className={`inline-block h-2.5 w-2.5 rounded-full ${
-            geoState === "on" ? "bg-blue-500" : geoState === "asking" ? "bg-amber-400" : "bg-slate-300"
-          }`}
-        />
-        現在地
-      </button>
+      {/* 左上に縦に積む。重なりが起きないよう1つの列にまとめる */}
+      <div className="absolute left-4 top-4 z-10 flex w-fit max-w-[16rem] flex-col items-start gap-2">
+        <button
+          onClick={startWatch}
+          className="flex items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+        >
+          <span
+            className={`inline-block h-2.5 w-2.5 rounded-full ${
+              geoState === "on" ? "bg-blue-500" : geoState === "asking" ? "bg-amber-400" : "bg-slate-300"
+            }`}
+          />
+          現在地
+        </button>
 
-      {/* 右上：案内 */}
-      <button
-        onClick={() => setPanel(true)}
-        className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 active:scale-95"
-      >
-        案内
-      </button>
+        <button
+          onClick={() => setPanel(true)}
+          className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 active:scale-95"
+        >
+          案内
+        </button>
+      </div>
 
-      {/* 左のサイドバー。四角いボタンを押すと開く。中身はフェーズ2 */}
-      <div className="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-start gap-2">
+      {/* 学内の情報。四角いボタンを押すと開く */}
+      <div className="absolute right-4 top-4 z-10 flex flex-row-reverse items-start gap-2">
         <button
           onClick={() => setSide((v) => !v)}
           aria-label="学内の情報"
@@ -635,17 +674,48 @@ export default function Guide() {
                 const on = focusId === f.properties.tempId;
                 return (
                   <li key={f.properties.tempId}>
-                    <button
-                      onClick={() => {
-                        focusBuilding(f.geometry.coordinates[0], f.properties.tempId);
-                        setListOpen(false);
-                      }}
-                      className={`w-full truncate rounded-lg px-3 py-2 text-left text-[12px] font-medium transition ${
-                        on ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    <div
+                      className={`flex overflow-hidden rounded-lg ${
+                        on ? "bg-orange-500" : "bg-slate-100"
                       }`}
                     >
-                      {label}
-                    </button>
+                      {/* 名前を押すとその場所へ寄る */}
+                      <button
+                        onClick={() =>
+                          focusBuilding(f.geometry.coordinates[0], f.properties.tempId)
+                        }
+                        className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-[12px] font-medium transition ${
+                          on ? "text-white" : "text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                      {/* ［案内］を押すだけでそこへの案内が始まる */}
+                      <button
+                        onClick={() => {
+                          const dest = {
+                            buildingId: f.properties.tempId,
+                            title: label,
+                            sub: "",
+                            score: 0,
+                          };
+                          setOrigin({ kind: "me" });
+                          setDest(dest);
+                          setTrip({ origin: { kind: "me" }, dest });
+                          setArrived(false);
+                          setFocusId(f.properties.tempId);
+                          setListOpen(false);
+                          startWatch();
+                        }}
+                        className={`shrink-0 px-2.5 text-[11px] font-bold transition ${
+                          on
+                            ? "bg-orange-600 text-white hover:bg-orange-700"
+                            : "bg-slate-200 text-slate-600 hover:bg-blue-600 hover:text-white"
+                        }`}
+                      >
+                        案内
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -661,7 +731,7 @@ export default function Guide() {
 
       {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
       {geoState !== "idle" && (
-        <div className="absolute left-4 top-16 z-10 max-w-[15rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
+        <div className="absolute left-4 top-32 z-10 max-w-[16rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
           {geoState === "asking" && "現在地を取得中…（初回は30秒ほどかかります）"}
           {geoState === "rough" && (
             <>
@@ -732,6 +802,18 @@ export default function Guide() {
               onPick={(h) => setDest(h)}
             />
 
+            {/* 教室は承認された人だけが見られる。未ログインには理由を伝える */}
+            {!canViewCampusInfo(role) && (
+              <p className="mt-2 rounded-xl bg-slate-100 p-2.5 text-[10px] leading-relaxed text-slate-500">
+                いまは<b>建物どうしの案内</b>だけ使えます。
+                教室（何号館の何階の何番）で探すには、
+                <a href="/login" className="font-bold text-blue-600 underline">
+                  ログイン
+                </a>
+                して管理者の承認を受けてください。
+              </p>
+            )}
+
             <button
               disabled={!dest}
               onClick={() => {
@@ -751,7 +833,7 @@ export default function Guide() {
 
       {/* 案内中。手順の一覧は出さず、地図の道と最小限の情報だけ見せる */}
       {trip && (
-        <div className="absolute left-4 top-24 z-10 w-[min(17rem,calc(100%-13rem))]">
+        <div className="absolute bottom-16 left-4 z-20 w-[min(18rem,calc(100%-2rem))]">
           <div className="flex items-center gap-2 rounded-full bg-white/95 py-2 pl-4 pr-2 shadow-md backdrop-blur">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold leading-tight text-slate-900">
@@ -759,7 +841,7 @@ export default function Guide() {
               </div>
               <div className="truncate text-[11px] leading-tight text-slate-500">
                 {route && !("error" in route)
-                  ? `${trip.origin.kind === "me" ? "現在地" : trip.origin.hit.title} から 徒歩${route.minutes}分・${route.meters}m`
+                  ? `${route.fromGate ? "正門" : trip.origin.kind === "me" ? "現在地" : trip.origin.hit.title} から 徒歩${route.minutes}分・${route.meters}m`
                   : route && "error" in route
                     ? route.error
                     : "計算中…"}

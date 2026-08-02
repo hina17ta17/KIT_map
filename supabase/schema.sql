@@ -151,10 +151,8 @@ create policy "periods write" on public.periods for all    using (public.role_ra
 -- 5. 教室
 --    「何号館の何階の何番の教室は何という名前か」を持つ
 --
---    ★ここだけ誰でも読める。
---      経路案内はログイン不要で使えるようにしており、
---      案内の最後に「302 は 3階です」を出すのに必要なため。
---      部屋番号と階は秘密の情報ではない。書き込みだけ制限する。
+--    ★承認された人だけが読める。
+--      ログインなしでできるのは「何号館から何号館まで」の案内だけ。
 -- ===============================================================
 
 create table if not exists public.rooms (
@@ -187,9 +185,9 @@ alter table public.rooms enable row level security;
 drop policy if exists "rooms read"  on public.rooms;
 drop policy if exists "rooms write" on public.rooms;
 
--- 誰でも読める（ログインしていなくても）
+-- 承認された人だけが読める
 create policy "rooms read" on public.rooms
-  for select using (true);
+  for select using (public.role_rank() >= 1);
 
 -- 登録・修正は Lv2 以上
 create policy "rooms write" on public.rooms

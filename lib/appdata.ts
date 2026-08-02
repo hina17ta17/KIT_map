@@ -44,41 +44,40 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
 /**
  * 教室をデータベースから読む。
  *
- * rooms テーブルは誰でも読める設定にしてある（案内で階を出すため）。
- * 未設定・未作成のときは静的ファイルにそのまま戻る。
+ * rooms は承認された人だけが読める。未ログインなら RLS が空を返すので、
+ * ここでは特別な分岐をしなくても自然に「教室なし」になる。
  */
-async function loadRooms(): Promise<Room[]> {
+export async function loadRooms(): Promise<Room[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
 
-  if (url && key) {
-    try {
-      const { createClient } = await import("./supabase/client");
-      const { data, error } = await createClient()
-        .from("rooms")
-        .select("id, building_id, building_code, floor, code, name, category, hint");
-      if (!error && data) {
-        return data.map((r) => ({
-          id: String(r.id),
-          buildingId: r.building_id as string,
-          code: (r.code as string) ?? "",
-          name: (r.name as string) ?? "",
-          floor: (r.floor as number) ?? 0,
-          category: (r.category as Room["category"]) ?? "other",
-          hint: (r.hint as string) ?? "",
-        }));
-      }
-    } catch {
-      // テーブル未作成などは静的ファイルに任せる
-    }
+  try {
+    const { createClient } = await import("./supabase/client");
+    const { data, error } = await createClient()
+      .from("rooms")
+      .select("id, building_id, floor, code, name, category, hint");
+    if (error || !data) return [];
+    return data.map((r) => ({
+      id: String(r.id),
+      buildingId: r.building_id as string,
+      code: (r.code as string) ?? "",
+      name: (r.name as string) ?? "",
+      floor: (r.floor as number) ?? 0,
+      category: (r.category as Room["category"]) ?? "other",
+      hint: (r.hint as string) ?? "",
+    }));
+  } catch {
+    return [];
   }
-
-  const rooms = await getJson<Room[]>("/data/rooms.json", []);
-  return Array.isArray(rooms) ? rooms : [];
 }
 
+/**
+ * 地図データだけを読む。
+ * 教室は権限で見え方が変わるので、別に読んであとから足す。
+ */
 export async function loadAppData(): Promise<AppData> {
-  const [campus, buildings, checkpoints, linkFc, rooms] = await Promise.all([
+  const [campus, buildings, checkpoints, linkFc] = await Promise.all([
     getJson("/data/campus.geojson", EMPTY.campus),
     getJson("/data/buildings.geojson", EMPTY.buildings),
     getJson("/data/checkpoints.geojson", EMPTY.checkpoints),
@@ -86,7 +85,6 @@ export async function loadAppData(): Promise<AppData> {
       type: "FeatureCollection",
       features: [],
     }),
-    loadRooms(),
   ]);
 
   return {
@@ -94,7 +92,7 @@ export async function loadAppData(): Promise<AppData> {
     buildings,
     checkpoints,
     links: linkFc.features.map((f) => f.properties),
-    rooms,
+    rooms: [],
   };
 }
 
