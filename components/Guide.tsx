@@ -47,8 +47,22 @@ export default function Guide() {
   >("idle");
   const watchId = useRef<number | null>(null);
 
-  /** 起動時のタイトル画面。触ると上下に割れて消える */
+  /** 起動時のタイトル画面。0.4秒かけて上下に割れる */
   const [splash, setSplash] = useState<"open" | "closing" | "done">("open");
+
+  const closeSplash = useCallback(() => {
+    setSplash((s) => {
+      if (s !== "open") return s;
+      window.setTimeout(() => setSplash("done"), 400);
+      return "closing";
+    });
+  }, []);
+
+  /** 少し見せてから自動で開く。触れば即座に開く */
+  useEffect(() => {
+    const t = window.setTimeout(closeSplash, 900);
+    return () => clearTimeout(t);
+  }, [closeSplash]);
   /** 左のサイドバーを開いているか */
   const [side, setSide] = useState(false);
   /** ログイン画面を開いているか */
@@ -57,6 +71,8 @@ export default function Guide() {
   const [focusId, setFocusId] = useState<string | null>(null);
   /** 建物一覧を開いているか */
   const [listOpen, setListOpen] = useState(false);
+  /** 一覧をスワイプで開閉するための、指を置いた位置 */
+  const touchY = useRef<number | null>(null);
   /** ログインしている人の権限。未ログインなら null */
   const [role, setRole] = useState<Role | null>(null);
   /** 経路検索のパネルを開いているか */
@@ -112,15 +128,48 @@ export default function Guide() {
     for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) map.on(ev, bump);
     map.on("load", () => setReady(true));
 
-    const ro = new ResizeObserver(() => map.resize());
+    /**
+     * 描画面の大きさを測り直す。
+     *
+     * iOS はアドレスバーの出入りで表示領域の高さが変わる。
+     * URLを触って再読み込みしたときなど、地図を作った直後と
+     * 実際の高さが食い違い、canvas が画面の半分のまま残ることがある。
+     * 取りこぼしを無くすため、複数の合図で測り直す。
+     */
+    const fit = () => {
+      map.resize();
+      bump();
+    };
+
+    const ro = new ResizeObserver(fit);
     ro.observe(boxRef.current);
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    // 初回描画のあとレイアウトが確定することがあるので、少し遅らせても測る
+    const timers = [80, 300, 900].map((ms) => window.setTimeout(fit, ms));
+
     mapRef.current = map;
     return () => {
       ro.disconnect();
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("orientationchange", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+      timers.forEach(clearTimeout);
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  /** 起動画面が消えたあとにも測り直す（隠れている間に高さが変わることがある） */
+  useEffect(() => {
+    if (splash !== "done") return;
+    const t = window.setTimeout(() => {
+      mapRef.current?.resize();
+      setTick((v) => v + 1);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [splash]);
 
   useEffect(() => {
     void loadAppData().then(setData);
@@ -162,6 +211,12 @@ export default function Guide() {
   /* ---------------- 現在地 ---------------- */
 
   const startWatch = useCallback(() => {
+    // 押した時点で描画面を測り直す。
+    // 位置情報の許可ダイアログでアドレスバーの高さが変わることがあり、
+    // ここで直しておかないと地図が半分のまま残る
+    mapRef.current?.resize();
+    setTick((v) => v + 1);
+
     // Safari / iOS で「使えない」原因のほとんどは HTTPS でないこと。
     // localhost だけは例外的に許される。
     if (typeof window !== "undefined" && !window.isSecureContext) {
@@ -359,7 +414,13 @@ export default function Guide() {
     if (d <= route.goal.properties.radius) {
       // 一瞬の誤差で誤判定しないよう、3秒入り続けたら到着とみなす
       if (inRangeSince.current == null) inRangeSince.current = Date.now();
-      else if (Date.now() - inRangeSince.current > 3000) setArrived(true);
+      else if (Date.now() - inRangeSince.current > 3000) {
+        setArrived((was) => {
+          // 画面を見ていなくても気づけるよう、初めて到着したときだけ振動させる
+          if (!was) navigator.vibrate?.([120, 60, 120]);
+          return true;
+        });
+      }
     } else {
       inRangeSince.current = null;
     }
@@ -450,12 +511,7 @@ export default function Guide() {
       {/* 起動時のタイトル。触ると上下に割れて地図が現れる */}
       {splash !== "done" && (
         <div
-          onClick={() => {
-            if (splash !== "open") return;
-            setSplash("closing");
-            // 0.7秒かけて開ききってから外す
-            window.setTimeout(() => setSplash("done"), 700);
-          }}
+          onClick={closeSplash}
           role="button"
           aria-label="はじめる"
           className="fixed inset-0 z-50 cursor-pointer"
@@ -465,7 +521,7 @@ export default function Guide() {
           <div
             className="absolute inset-x-0 top-0 h-1/2 overflow-hidden bg-slate-950"
             style={{
-              transition: "transform 700ms cubic-bezier(0.65,0,0.35,1)",
+              transition: "transform 400ms cubic-bezier(0.65,0,0.35,1)",
               transform: splash === "closing" ? "translateY(-100%)" : "none",
             }}
           >
@@ -478,7 +534,7 @@ export default function Guide() {
           <div
             className="absolute inset-x-0 bottom-0 h-1/2 overflow-hidden bg-slate-950"
             style={{
-              transition: "transform 700ms cubic-bezier(0.65,0,0.35,1)",
+              transition: "transform 400ms cubic-bezier(0.65,0,0.35,1)",
               transform: splash === "closing" ? "translateY(100%)" : "none",
             }}
           >
@@ -558,15 +614,18 @@ export default function Guide() {
             const label = f.properties.name || f.properties.code;
             if (!label) return null;
             return (
-              <span
+              // ラベルを押すとその建物へ寄る。
+              // 親は pointer-events-none なので、ここだけ auto に戻す
+              <button
                 key={f.properties.tempId}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm ${
-                  on ? "bg-orange-500 text-white" : "bg-white/85 text-slate-800"
+                onClick={() => focusBuilding(f.geometry.coordinates[0], f.properties.tempId)}
+                className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm transition active:scale-95 ${
+                  on ? "bg-orange-500 text-white" : "bg-white/85 text-slate-800 hover:bg-white"
                 }`}
                 style={{ left: c.x, top: c.y, borderColor: cat.lineColor }}
               >
                 {label}
-              </span>
+              </button>
             );
           })}
         </div>
@@ -712,6 +771,21 @@ export default function Guide() {
         >
           <button
             onClick={() => setListOpen((v) => !v)}
+            // 上下のスワイプ／ホイールでも開閉できるようにする
+            onWheel={(e) => setListOpen(e.deltaY < 0)}
+            onTouchStart={(e) => {
+              touchY.current = e.touches[0].clientY;
+            }}
+            onTouchMove={(e) => {
+              if (touchY.current == null) return;
+              const dy = touchY.current - e.touches[0].clientY;
+              if (Math.abs(dy) < 24) return; // 誤反応を防ぐ
+              setListOpen(dy > 0); // 上へ動かせば開く
+              touchY.current = null;
+            }}
+            onTouchEnd={() => {
+              touchY.current = null;
+            }}
             className="w-full px-4 pb-2 pt-2.5 transition hover:bg-slate-50"
           >
             <span className="mx-auto mb-1.5 block h-1 w-10 rounded-full bg-slate-300" />
@@ -791,6 +865,46 @@ export default function Guide() {
       <span className="absolute bottom-0.5 right-1.5 z-30 rounded bg-white/70 px-1 text-[9px] text-slate-600">
         地理院タイル
       </span>
+
+      {/* 到着。見逃さないよう画面の中央に大きく出す */}
+      {arrived && trip && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-6 backdrop-blur-sm">
+          <div
+            className="w-full max-w-xs rounded-3xl bg-white p-6 text-center shadow-2xl"
+            style={{ animation: "kitPop 320ms cubic-bezier(0.16,1,0.3,1)" }}
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-2xl text-white">
+              ✓
+            </div>
+            <p className="mt-3 text-[11px] font-semibold tracking-widest text-emerald-600">
+              到着しました
+            </p>
+            <p className="mt-1 text-lg font-bold leading-snug text-slate-900">
+              {trip.dest.title}
+            </p>
+            {trip.dest.sub && (
+              <p className="mt-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-800">
+                {trip.dest.title.split(" ").pop()} は {trip.dest.sub}です
+              </p>
+            )}
+            <button
+              onClick={() => {
+                setArrived(false);
+                setTrip(null);
+              }}
+              className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+            >
+              案内を終える
+            </button>
+            <button
+              onClick={() => setArrived(false)}
+              className="mt-1.5 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100"
+            >
+              地図に戻る
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 経路検索のパネル */}
       {panel && data && (
@@ -886,11 +1000,6 @@ export default function Guide() {
             </div>
           )}
 
-          {arrived && (
-            <div className="mt-1.5 w-fit rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-white shadow">
-              到着しました
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -907,13 +1016,7 @@ function SplashInner() {
       >
         KIT<span className="ml-2 font-semibold">map</span>
       </div>
-      <div
-        className="mt-4 text-[11px] tracking-[0.3em] text-white/45"
-        style={{ animation: "kitBlink 2.4s ease-in-out 900ms infinite" }}
-      >
-        TOUCH TO START
-      </div>
-      <div className="mt-16 text-[10px] tracking-wider text-white/25">
+      <div className="mt-10 text-[10px] tracking-wider text-white/25">
         金沢工業大学 扇が丘キャンパス
       </div>
     </>
