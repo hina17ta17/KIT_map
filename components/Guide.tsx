@@ -11,7 +11,7 @@
  * 建物の判別は検索と、選択中のハイライトで行う。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Map as MlMap, NavigationControl, ScaleControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
@@ -1217,10 +1217,22 @@ export default function Guide() {
             style={{ opacity: listOpen ? 1 : 0, transition: "opacity 200ms" }}
           >
             <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-              {listed.map(({ f, label }) => {
+              {listed.map(({ f, label, key }, i) => {
                 const on = focusId === f.properties.tempId;
+                // 区切りが変わったところに見出しを挟む。
+                // 列をまたいで一行使いたいので col-span-full にする
+                const head =
+                  key[0] !== listed[i - 1]?.key[0] ? GROUP_LABEL[key[0]] : undefined;
                 return (
-                  <li key={f.properties.tempId}>
+                  <Fragment key={f.properties.tempId}>
+                    {head && (
+                      <li className="col-span-full mt-2 first:mt-0">
+                        <div className="border-t border-slate-200 pb-1 pt-2 text-[10px] font-bold text-slate-400">
+                          {head}
+                        </div>
+                      </li>
+                    )}
+                  <li>
                     <div
                       className={`flex overflow-hidden rounded-lg ${
                         on ? "bg-orange-500" : "bg-slate-100"
@@ -1264,6 +1276,7 @@ export default function Guide() {
                       </button>
                     </div>
                   </li>
+                  </Fragment>
                 );
               })}
             </ul>
@@ -1521,8 +1534,15 @@ const TAIL_ORDER = [
   "自転車(南)",
   "テニスコート",
   "グラウンド",
-  "金沢工業大学前バス停",
 ];
+
+/**
+ * 「その他」としてまとめるもの。
+ *
+ * 構内の建物ではなく、行き帰りに使う場所。
+ * 号館や施設に混ぜると探しにくいので、末尾に分けて置く。
+ */
+const OTHER_ORDER = ["金沢工業大学前バス停", "野々市工大前駅", "バス停"];
 
 /**
  * 点が輪の中にあるか。辺との交差数が奇数なら中にいる。
@@ -1554,26 +1574,42 @@ const ZOOM_ONLY_AT = 17.5;
 /** 全角半角の括弧ゆれを吸収して比べる */
 const plain = (s: string) => s.replace(/[（）()\s]/g, "");
 const TAIL_KEYS = TAIL_ORDER.map(plain);
+const OTHER_KEYS = OTHER_ORDER.map(plain);
+
+/** 一覧の区切り。数が小さいほど上に出る */
+export const GROUP = { hall: 0, plain: 1, tail: 2, other: 3 } as const;
+
+/** 区切りの見出し。号館には見出しを付けない（先頭なので要らない） */
+const GROUP_LABEL: Record<number, string> = {
+  [GROUP.tail]: "施設",
+  [GROUP.other]: "その他",
+};
 
 /**
  * 並び順のキー。
  * ① 号館を番号順（1, 2, 3, 5 …）
  *    名前に「6号館」を含むもの（LC(6号館) など）は 6 の直後に置く
  * ② それ以外の建物
- * ③ 自転車・テニスコート・グラウンド・バス停を指定の順
+ * ③ 自転車・テニスコート・グラウンドを指定の順
+ * ④ その他（バス停・駅）を指定の順
  */
 function orderKey(name: string, code: string): [number, number, string] {
-  if (code && /^\d+$/.test(code)) return [0, Number(code), ""];
+  if (code && /^\d+$/.test(code)) return [GROUP.hall, Number(code), ""];
+
+  const o = OTHER_KEYS.indexOf(plain(name));
+  if (o >= 0) return [GROUP.other, o, ""];
 
   const i = TAIL_KEYS.indexOf(plain(name));
-  if (i >= 0) return [2, i, ""];
+  if (i >= 0) return [GROUP.tail, i, ""];
 
   // 番号は無いが「◯号館」と名乗るものは、その号館の直後に差し込む
   const m = /(\d+)\s*号館/.exec(name);
-  if (m) return [0, Number(m[1]) + 0.5, ""];
+  if (m) return [GROUP.hall, Number(m[1]) + 0.5, ""];
 
-  return [1, 0, name];
+  return [GROUP.plain, 0, name];
 }
+
+export { GROUP_LABEL };
 
 /* ---------------- 補助 ---------------- */
 
