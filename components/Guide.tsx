@@ -138,6 +138,10 @@ export default function Guide() {
         center: INITIAL_VIEW.center,
         zoom: HOME_ZOOM,
         maxZoom: 21,
+        // これ以上引いても構内の案内には使えない。
+        // 引ききった先で二本指を動かすと、地図が受け取らなくなった指の動きを
+        // ブラウザがページの拡大とみなしてしまうため、行き止まりを作らない
+        minZoom: 15,
         // 既定の出典表示は畳まれて「ⓘ」ボタンになる。
         // ボタンを消したいが出典表示は地理院タイルの利用条件で必須なので、
         // 自前で「畳まない」ものを付け直して、小さな文字として常時出す。
@@ -200,6 +204,27 @@ export default function Guide() {
       timers.forEach(clearTimeout);
       map.remove();
       mapRef.current = null;
+    };
+  }, []);
+
+  /**
+   * ページ自体が拡大されるのを止める。
+   *
+   * iOS の Safari は viewport の `user-scalable=no` を無視する。
+   * 二本指の動きが地図に届かなかったとき——引ききった先や、
+   * 建物の名前など地図の上に重ねた部品から始めたとき——
+   * Safari はそれをページの拡大とみなす。
+   * するとページ全体の倍率が上がり、地図はそのままなのに
+   * 名前やボタンだけが大きくなる。
+   *
+   * Safari だけが出すこの合図を断ると、拡大は起きない。
+   */
+  useEffect(() => {
+    const stop = (e: Event) => e.preventDefault();
+    const kinds = ["gesturestart", "gesturechange", "gestureend"];
+    for (const k of kinds) document.addEventListener(k, stop, { passive: false });
+    return () => {
+      for (const k of kinds) document.removeEventListener(k, stop);
     };
   }, []);
 
