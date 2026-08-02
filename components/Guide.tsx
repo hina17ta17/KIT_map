@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AttributionControl, Map as MlMap, NavigationControl, ScaleControl } from "maplibre-gl";
+import { Map as MlMap, NavigationControl, ScaleControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Position } from "geojson";
 import { BASES, GSI_ATTRIBUTION, INITIAL_VIEW } from "@/lib/gsi";
@@ -27,7 +27,7 @@ const ACC_ROUGH = 50;
 /** 現在地からこの距離以内に経路の節点が無ければ案内できない */
 const SNAP_MAX = 50;
 
-type Fix = { pos: Position; accuracy: number };
+type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
 type Origin = { kind: "me" } | { kind: "place"; hit: SearchHit };
 
@@ -41,7 +41,9 @@ export default function Guide() {
   const [fatal, setFatal] = useState<string | null>(null);
 
   const [fix, setFix] = useState<Fix | null>(null);
-  const [geoState, setGeoState] = useState<"idle" | "asking" | "on" | "denied" | "rough">("idle");
+  const [geoState, setGeoState] = useState<
+    "idle" | "asking" | "on" | "rough" | "denied" | "timeout" | "unavailable" | "insecure"
+  >("idle");
   const watchId = useRef<number | null>(null);
 
   /** 起動時のタイトル画面。触ると上下に割れて消える */
@@ -52,6 +54,8 @@ export default function Guide() {
   const [login, setLogin] = useState(false);
   /** 一覧から選んで注目している建物 */
   const [focusId, setFocusId] = useState<string | null>(null);
+  /** 建物一覧を開いているか */
+  const [listOpen, setListOpen] = useState(false);
   /** 経路検索のパネルを開いているか */
   const [panel, setPanel] = useState(false);
   const [origin, setOrigin] = useState<Origin>({ kind: "me" });
@@ -96,9 +100,10 @@ export default function Guide() {
       return;
     }
 
-    map.addControl(new NavigationControl({ visualizePitch: false }), "bottom-right");
-    map.addControl(new ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
-    map.addControl(new AttributionControl({ compact: false }), "bottom-left");
+    // 下の建物一覧に隠れないよう、地図の操作系は右上寄りに置く。
+    // 出典表示は MapLibre に任せず自前で出す（一覧に隠れると条件を満たせないため）
+    map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
+    map.addControl(new ScaleControl({ maxWidth: 90, unit: "metric" }), "top-right");
 
     const bump = () => setTick((v) => v + 1);
     for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) map.on(ev, bump);
@@ -121,29 +126,54 @@ export default function Guide() {
   /* ---------------- 現在地 ---------------- */
 
   const startWatch = useCallback(() => {
+    // Safari / iOS で「使えない」原因のほとんどは HTTPS でないこと。
+    // localhost だけは例外的に許される。
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setGeoState("insecure");
+      return;
+    }
     if (!navigator.geolocation) {
       setGeoState("denied");
       return;
     }
     if (watchId.current != null) {
-      // すでに取得中なら現在地へ寄せるだけ
       if (fix) mapRef.current?.easeTo({ center: [fix.pos[0], fix.pos[1]], zoom: 18 });
       return;
     }
+
     setGeoState("asking");
     watchId.current = navigator.geolocation.watchPosition(
       (p) => {
         const acc = p.coords.accuracy;
-        // 精度が悪すぎるものは採用しない。前の位置を保つ方が誤案内より良い
-        if (acc > ACC_ROUGH) {
-          setGeoState("rough");
-          return;
-        }
-        setGeoState("on");
-        setFix({ pos: [p.coords.longitude, p.coords.latitude], accuracy: acc });
+        const now = Date.now();
+        const next: Fix = { pos: [p.coords.longitude, p.coords.latitude], accuracy: acc, at: now };
+
+        setFix((prev) => {
+          if (!prev) return next;
+          // iOS/Android は最初に基地局やWi-Fiの粗い位置を返し、
+          // 数秒〜十数秒かけて GPS の精度に上がっていく。
+          // そこで「より精度の良いものだけ採用」する。
+          // ただし古くなった値に居座られないよう、15秒経ったら無条件に入れ替える。
+          const stale = now - prev.at > 15_000;
+          return acc <= prev.accuracy || stale ? next : prev;
+        });
+
+        // 粗いあいだも位置は出す（円で誤差を正直に見せる）。
+        // 経路の起点に使うかどうかは別途 accuracy で判断する。
+        setGeoState(acc > ACC_ROUGH ? "rough" : "on");
       },
-      () => setGeoState("denied"),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) setGeoState("denied");
+        else if (err.code === err.TIMEOUT) setGeoState("timeout");
+        else setGeoState("unavailable");
+      },
+      {
+        enableHighAccuracy: true,
+        // 古い位置を使い回さない。毎回測り直させる
+        maximumAge: 0,
+        // GPSが安定するまで時間がかかる。短いとiOSで即タイムアウトする
+        timeout: 30_000,
+      },
     );
   }, [fix]);
 
@@ -569,45 +599,106 @@ export default function Guide() {
         </div>
       )}
 
-      {/* 右の建物一覧。押すとその建物へ寄る */}
+      {/* 建物一覧。下からせり上がって広がる */}
       {listed.length > 0 && (
-        <aside className="absolute bottom-16 right-4 top-20 z-10 flex w-36 flex-col overflow-hidden rounded-2xl bg-white/95 shadow-xl backdrop-blur">
-          <div className="border-b border-slate-100 px-3 py-2 text-[11px] font-bold text-slate-500">
-            建物一覧
-            <span className="ml-1 font-normal text-slate-400">{listed.length}</span>
+        <div
+          className="absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-t-3xl bg-white/95 shadow-2xl backdrop-blur"
+          style={{
+            height: listOpen ? "58dvh" : "3.25rem",
+            transition: "height 350ms cubic-bezier(0.32,0.72,0,1)",
+          }}
+        >
+          <button
+            onClick={() => setListOpen((v) => !v)}
+            className="w-full px-4 pb-2 pt-2.5 transition hover:bg-slate-50"
+          >
+            <span className="mx-auto mb-1.5 block h-1 w-10 rounded-full bg-slate-300" />
+            <span className="flex items-center justify-center gap-1.5 text-[12px] font-bold text-slate-700">
+              建物一覧
+              <span className="font-normal text-slate-400">{listed.length}</span>
+              <span
+                className="text-slate-400 transition"
+                style={{ transform: listOpen ? "rotate(180deg)" : "none" }}
+              >
+                ▲
+              </span>
+            </span>
+          </button>
+
+          {/* 開いているときだけ中身を出す。2列にして一覧性を上げる */}
+          <div
+            className="h-[calc(58dvh-3.25rem)] overflow-y-auto overscroll-contain px-3 pb-4"
+            style={{ opacity: listOpen ? 1 : 0, transition: "opacity 200ms" }}
+          >
+            <ul className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+              {listed.map(({ f, label }) => {
+                const on = focusId === f.properties.tempId;
+                return (
+                  <li key={f.properties.tempId}>
+                    <button
+                      onClick={() => {
+                        focusBuilding(f.geometry.coordinates[0], f.properties.tempId);
+                        setListOpen(false);
+                      }}
+                      className={`w-full truncate rounded-lg px-3 py-2 text-left text-[12px] font-medium transition ${
+                        on ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          <ul className="flex-1 overflow-y-auto overscroll-contain py-1">
-            {listed.map(({ f, label }) => {
-              const on = focusId === f.properties.tempId;
-              return (
-                <li key={f.properties.tempId}>
-                  <button
-                    onClick={() =>
-                      focusBuilding(f.geometry.coordinates[0], f.properties.tempId)
-                    }
-                    className={`w-full px-3 py-1.5 text-left text-[12px] font-medium transition ${
-                      on
-                        ? "bg-orange-500 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </aside>
+        </div>
       )}
 
-      {/* 現在地の状態。控えめに出す */}
+      {/* 出典表示。地理院タイルの利用条件で必須。一覧に隠れない位置に置く */}
+      <span className="absolute bottom-0.5 right-1.5 z-30 rounded bg-white/70 px-1 text-[9px] text-slate-600">
+        地理院タイル
+      </span>
+
+      {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
       {geoState !== "idle" && (
-        <div className="absolute left-4 top-16 z-10 rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur">
-          {geoState === "asking" && "取得中…"}
-          {geoState === "denied" && "現在地を使えません"}
-          {geoState === "rough" && "精度が足りません"}
+        <div className="absolute left-4 top-16 z-10 max-w-[15rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
+          {geoState === "asking" && "現在地を取得中…（初回は30秒ほどかかります）"}
+          {geoState === "rough" && (
+            <>
+              精度を上げています… ±{Math.round(fix?.accuracy ?? 0)}m
+              <span className="block text-[10px] text-slate-400">
+                屋外に出て少し待つと精度が上がります
+              </span>
+            </>
+          )}
           {geoState === "on" &&
             (inCampus === false ? "圏外（キャンパス外）" : `±${Math.round(fix?.accuracy ?? 0)}m`)}
+          {geoState === "denied" && (
+            <>
+              現在地が拒否されています
+              <span className="block text-[10px] text-slate-400">
+                iPhone：設定 → プライバシー → 位置情報サービス → Safari を「確認」か「許可」に
+              </span>
+            </>
+          )}
+          {geoState === "timeout" && (
+            <>
+              時間内に測位できませんでした
+              <span className="block text-[10px] text-slate-400">
+                屋内では取得しにくくなります。もう一度お試しください
+              </span>
+            </>
+          )}
+          {geoState === "unavailable" && "現在地を取得できませんでした"}
+          {geoState === "insecure" && (
+            <>
+              この接続では現在地を使えません
+              <span className="block text-[10px] text-slate-400">
+                Safari などは HTTPS でないと位置情報を許可しません。
+                公開URL（https://）から開いてください
+              </span>
+            </>
+          )}
         </div>
       )}
 

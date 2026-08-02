@@ -24,6 +24,12 @@ body {
   font-size: 10px;
 }
 
+/* 右上には自前の［案内］ボタンを置いているので、
+   地図の操作系はその下から始める */
+.maplibregl-ctrl-top-right {
+  top: 3.75rem;
+}
+
 /* 起動時のタイトル画面のアニメーション */
 @keyframes kitFade {
   from { opacity: 0; }
