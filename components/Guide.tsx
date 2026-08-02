@@ -26,6 +26,7 @@ import {
   type SearchHit,
 } from "@/lib/appdata";
 import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
+import { LANG_KEY, floorLabelIn, placeName, t, type Lang } from "@/lib/i18n";
 import { buildGraph, buildSteps, findBestPath, nearestNode } from "@/lib/route";
 import CampusPanel from "./CampusPanel";
 import { metersBetween } from "@/lib/geo";
@@ -35,6 +36,14 @@ const ACC_TRUST = 20;
 const ACC_ROUGH = 50;
 /** 現在地からこの距離以内に経路の節点が無ければ案内できない */
 const SNAP_MAX = 50;
+
+/* 到着とみなす条件。入口の半径が 5m でも、測位の誤差ぶんは緩める */
+/** これより狭くは判定しない */
+const ARRIVE_MIN = 20;
+/** 誤差が大きくても、これより広くは判定しない */
+const ARRIVE_MAX = 60;
+/** この時間だけ入り続けたら到着 */
+const ARRIVE_HOLD = 3000;
 /** 起動時の縮尺。建物を押して寄ったあと、ここへ戻す */
 const HOME_ZOOM = 17;
 
@@ -141,6 +150,8 @@ export default function Guide() {
   const [favPanel, setFavPanel] = useState(false);
   /** 地図のラベルで最初に押した建物。次に押した建物が目的地になる */
   const [pickedFrom, setPickedFrom] = useState<SearchHit | null>(null);
+  /** 表示の言葉。既定は日本語 */
+  const [lang, setLang] = useState<Lang>("ja");
   /** 一覧をスワイプで開閉するための、指を置いた位置 */
   const touchY = useRef<number | null>(null);
   /** ログインしている人の権限。未ログインなら null */
@@ -154,6 +165,8 @@ export default function Guide() {
   /** 実際に案内中の組み合わせ。[スタート]を押して確定する */
   const [trip, setTrip] = useState<{ origin: Origin; dest: SearchHit } | null>(null);
   const [arrived, setArrived] = useState(false);
+  /** 到着の数え直しを促す合図。現在地が更新されなくても数え終われるように */
+  const [recheck, setRecheck] = useState(0);
   const inRangeSince = useRef<number | null>(null);
 
   /* ---------------- 地図 ---------------- */
@@ -272,15 +285,34 @@ export default function Guide() {
     void loadAppData().then(setData);
   }, []);
 
-  /* お気に入りは端末に覚えさせる。ログインしなくても使えるようにするため */
+  /* お気に入りと言葉は端末に覚えさせる。ログインしなくても使えるようにするため */
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FAV_KEY);
       if (raw) setFavs(JSON.parse(raw) as string[]);
+      const l = localStorage.getItem(LANG_KEY);
+      if (l === "en" || l === "ja") setLang(l);
     } catch {
       // 壊れていたら無いものとして始める
     }
   }, []);
+
+  /** 日本語と英語を入れ替える */
+  const toggleLang = useCallback(() => {
+    setLang((prev) => {
+      const next = prev === "ja" ? "en" : "ja";
+      try {
+        localStorage.setItem(LANG_KEY, next);
+      } catch {
+        // 保存できなくても、この画面では切り替わるようにしておく
+      }
+      return next;
+    });
+  }, []);
+
+  /** その言葉に直す。書くたびに lang を渡さなくて済むようにする */
+  const T = useCallback((ja: string) => t(lang, ja), [lang]);
+  const P = useCallback((name: string) => placeName(lang, name), [lang]);
 
   const toggleFav = useCallback((id: string) => {
     setFavs((prev) => {
@@ -680,21 +712,50 @@ export default function Guide() {
       inRangeSince.current = null;
       return;
     }
+
+    /*
+     * 「着いた」とみなす広さ。
+     *
+     * 入口に書いてある半径は 5m のものが多い。ところが現在地は
+     * 屋外でも ±5〜30m ずれるので、5m の輪に入ったと判定されることは
+     * ほとんど無い。実際、これが到着が出なかったいちばんの理由。
+     * 測位の誤差ぶんは緩めないと、いつまでも着かないことになる。
+     *
+     * ただし誤差が大きいときに何でも到着にしては困るので、上限を置く。
+     */
+    const tol = Math.min(
+      ARRIVE_MAX,
+      Math.max(route.goal.properties.radius, fix.accuracy, ARRIVE_MIN),
+    );
+
     const d = metersBetween(fix.pos, route.goal.geometry.coordinates);
-    if (d <= route.goal.properties.radius) {
-      // 一瞬の誤差で誤判定しないよう、3秒入り続けたら到着とみなす
-      if (inRangeSince.current == null) inRangeSince.current = Date.now();
-      else if (Date.now() - inRangeSince.current > 3000) {
-        setArrived((was) => {
-          // 画面を見ていなくても気づけるよう、初めて到着したときだけ振動させる
-          if (!was) navigator.vibrate?.([120, 60, 120]);
-          return true;
-        });
-      }
-    } else {
+    if (d > tol) {
       inRangeSince.current = null;
+      return;
     }
-  }, [fix, route, trip]);
+
+    if (inRangeSince.current == null) inRangeSince.current = Date.now();
+    const left = ARRIVE_HOLD - (Date.now() - inRangeSince.current);
+
+    // 一瞬の誤差で誤判定しないよう、少しのあいだ入り続けたら到着とみなす
+    if (left <= 0) {
+      setArrived((was) => {
+        // 画面を見ていなくても気づけるよう、初めて到着したときだけ振動させる
+        if (!was) navigator.vibrate?.([120, 60, 120]);
+        return true;
+      });
+      return;
+    }
+
+    /*
+     * 現在地が更新されないと、この処理は動き直さない。
+     * 精度の良い値が来ないあいだ fix は据え置かれるので、
+     * 着いた場所に立ち止まったまま数え終われないことがあった。
+     * 時間が来たら自分で見に来る。
+     */
+    const timer = window.setTimeout(() => setRecheck((v) => v + 1), left + 50);
+    return () => clearTimeout(timer);
+  }, [fix, route, trip, recheck]);
 
   /**
    * 経路が出たら、道すじ全体が入るところまで引く。
@@ -1137,8 +1198,8 @@ export default function Guide() {
                 }`}
                 style={{ left: c.x, top: c.y, borderColor: cat.lineColor }}
               >
-                {from && <span className="mr-1 opacity-80">出発</span>}
-                {label}
+                {from && <span className="mr-1 opacity-80">{T("出発")}</span>}
+                {P(label)}
               </button>
             );
           })}
@@ -1207,14 +1268,14 @@ export default function Guide() {
               geoState === "on" ? "bg-blue-500" : geoState === "asking" ? "bg-amber-400" : "bg-slate-300"
             }`}
           />
-          現在地
+          {T("現在地")}
         </button>
 
         <button
           onClick={() => setPanel(true)}
           className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 active:scale-95"
         >
-          案内
+          {T("案内")}
         </button>
 
         {/* お気に入り。案内と学内の情報のあいだに置く */}
@@ -1240,20 +1301,34 @@ export default function Guide() {
           </button>
         </div>
 
+        {/* 言葉の切り替え。サイドバーの下に置く。
+            英語のあいだは光らせて、いま切り替わっていることを見せる */}
+        <button
+          onClick={toggleLang}
+          aria-label={lang === "ja" ? "Switch to English" : "日本語に切り替え"}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl text-[11px] font-bold shadow-md backdrop-blur transition active:scale-95 ${
+            lang === "en"
+              ? "bg-blue-600 text-white shadow-blue-500/50 ring-2 ring-blue-300"
+              : "bg-white/95 text-slate-700 hover:bg-white"
+          }`}
+        >
+          {lang === "en" ? "EN" : "あ"}
+        </button>
+
         {/* 出発地を押した直後。次に何をすればよいかを出す */}
         {pickedFrom && (
           <div className="flex max-w-[16rem] items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-[11px] font-bold text-white shadow-md">
             <span className="min-w-0">
               <span className="block truncate">出発：{pickedFrom.title}</span>
               <span className="block font-normal text-blue-100">
-                次に目的地のラベルを押してください
+                {T("次に目的地のラベルを押してください")}
               </span>
             </span>
             <button
               onClick={() => setPickedFrom(null)}
               className="ml-auto shrink-0 rounded-full bg-blue-500 px-2 py-1 text-[10px] font-bold"
             >
-              やめる
+              {T("やめる")}
             </button>
           </div>
         )}
@@ -1358,12 +1433,12 @@ export default function Guide() {
         <div className="absolute inset-0 z-30 flex items-start justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
           <div className="mt-4 flex max-h-[calc(100dvh-4rem)] w-full max-w-md flex-col rounded-2xl bg-white p-4 shadow-2xl">
             <div className="mb-2 flex shrink-0 items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">お気に入り</h2>
+              <h2 className="text-base font-bold text-slate-900">{T("お気に入り")}</h2>
               <button
                 onClick={() => setFavPanel(false)}
                 className="rounded-full px-3 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
               >
-                閉じる
+                {T("閉じる")}
               </button>
             </div>
             <p className="mb-2 shrink-0 text-[11px] leading-relaxed text-slate-500">
@@ -1387,7 +1462,7 @@ export default function Guide() {
                           on ? "font-bold text-slate-900" : "text-slate-700"
                         }`}
                       >
-                        {label}
+                        {P(label)}
                       </span>
                     </button>
                   </li>
@@ -1428,7 +1503,7 @@ export default function Guide() {
           >
             <span className="mx-auto mb-1.5 block h-1 w-10 rounded-full bg-slate-300" />
             <span className="flex items-center justify-center gap-1.5 text-[12px] font-bold text-slate-700">
-              建物一覧
+              {T("建物一覧")}
               <span className="font-normal text-slate-400">{listed.length}</span>
               <span
                 className="text-slate-400 transition"
@@ -1448,7 +1523,7 @@ export default function Guide() {
               {/* お気に入りがあれば、いちばん上にまとめて出す */}
               {favListed.length > 0 && (
                 <li className="col-span-full pb-1 text-[10px] font-bold text-amber-600">
-                  ★ お気に入り
+                  {T("★ お気に入り")}
                 </li>
               )}
               {favListed.map(({ f, label }) => {
@@ -1468,7 +1543,7 @@ export default function Guide() {
                           on ? "text-white" : "text-slate-800 hover:bg-amber-100"
                         }`}
                       >
-                        {label}
+                        {P(label)}
                       </button>
                       <button
                         onClick={() => {
@@ -1492,7 +1567,7 @@ export default function Guide() {
                             : "bg-amber-200 text-amber-900 hover:bg-blue-600 hover:text-white"
                         }`}
                       >
-                        案内
+                        {T("案内")}
                       </button>
                     </div>
                   </li>
@@ -1529,7 +1604,7 @@ export default function Guide() {
                           on ? "text-white" : "text-slate-700 hover:bg-slate-200"
                         }`}
                       >
-                        {label}
+                        {P(label)}
                       </button>
                       {/* ［案内］を押すだけでそこへの案内が始まる */}
                       <button
@@ -1554,7 +1629,7 @@ export default function Guide() {
                             : "bg-slate-200 text-slate-600 hover:bg-blue-600 hover:text-white"
                         }`}
                       >
-                        案内
+                        {T("案内")}
                       </button>
                     </div>
                   </li>
@@ -1582,10 +1657,10 @@ export default function Guide() {
               ✓
             </div>
             <p className="mt-3 text-[11px] font-semibold tracking-widest text-emerald-600">
-              到着しました
+              {T("到着しました")}
             </p>
             <p className="mt-1 text-lg font-bold leading-snug text-slate-900">
-              {trip.dest.title}
+              {P(trip.dest.title)}
             </p>
 
             {/* 建物の前まで来ただけなので、中の何階かをここで大きく伝える。
@@ -1593,15 +1668,15 @@ export default function Guide() {
             {trip.dest.sub ? (
               <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-3">
                 <p className="text-[10px] font-bold tracking-widest text-emerald-700">
-                  建物の中では
+                  {T("建物の中では")}
                 </p>
-                <p className="mt-0.5 text-2xl font-bold text-emerald-900">{trip.dest.sub}</p>
+                <p className="mt-0.5 text-2xl font-bold text-emerald-900">{floorLabelIn(lang, trip.dest.sub)}</p>
                 <p className="mt-0.5 text-[11px] text-emerald-700">
-                  ここから中に入って、この階へ向かってください
+                  {T("ここから中に入って、この階へ向かってください")}
                 </p>
               </div>
             ) : (
-              <p className="mt-2 text-[11px] text-slate-500">建物の前に着きました</p>
+              <p className="mt-2 text-[11px] text-slate-500">{T("建物の前に着きました")}</p>
             )}
             <button
               onClick={() => {
@@ -1610,13 +1685,13 @@ export default function Guide() {
               }}
               className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
             >
-              案内を終える
+              {T("案内を終える")}
             </button>
             <button
               onClick={() => setArrived(false)}
               className="mt-1.5 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100"
             >
-              地図に戻る
+              {T("地図に戻る")}
             </button>
           </div>
         </div>
@@ -1632,26 +1707,28 @@ export default function Guide() {
                 onClick={() => setPanel(false)}
                 className="rounded-full px-3 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
               >
-                閉じる
+                {T("閉じる")}
               </button>
             </div>
 
             <Field
-              label="出発地"
+              label={T("出発地")}
               data={data}
               value={origin.kind === "me" ? "現在地" : origin.hit.title}
               allowMe
               onMe={() => setOrigin({ kind: "me" })}
               onPick={(h) => setOrigin({ kind: "place", hit: h })}
               favs={favHits}
+              lang={lang}
             />
             <div className="h-2" />
             <Field
-              label="目的地"
+              label={T("目的地")}
               data={data}
               value={dest?.title ?? ""}
               onPick={(h) => setDest(h)}
               favs={favHits}
+              lang={lang}
             />
 
             {/* 教室は承認された人だけが見られる。未ログインには理由を伝える */}
@@ -1689,7 +1766,7 @@ export default function Guide() {
           <div className="flex items-center gap-2 rounded-full bg-white/95 py-2 pl-4 pr-2 shadow-md backdrop-blur">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold leading-tight text-slate-900">
-                {trip.dest.title}
+                {P(trip.dest.title)}
               </div>
               <div className="truncate text-[11px] leading-tight text-slate-500">
                 {route && !("error" in route)
@@ -1709,7 +1786,7 @@ export default function Guide() {
               }}
               className="shrink-0 rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-95"
             >
-              案内を消す
+              {T("案内を消す")}
             </button>
           </div>
 
@@ -1718,7 +1795,7 @@ export default function Guide() {
           {trip.dest.sub && (
             <div className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white shadow">
               <span className="opacity-80">建物の中では</span>
-              <span className="text-[13px]">{trip.dest.sub}</span>
+              <span className="text-[13px]">{floorLabelIn(lang, trip.dest.sub)}</span>
             </div>
           )}
 
@@ -1738,6 +1815,7 @@ function SplashInner() {
       >
         KIT<span className="ml-2 font-semibold">map</span>
       </div>
+      {/* 起動画面は言葉を切り替える前に出るので、日本語のまま */}
       <div className="mt-10 text-[10px] tracking-wider text-white/25">
         金沢工業大学 扇が丘キャンパス
       </div>
@@ -1755,6 +1833,7 @@ function Field({
   onMe,
   onPick,
   favs,
+  lang,
 }: {
   label: string;
   data: AppData;
@@ -1763,7 +1842,9 @@ function Field({
   onMe?: () => void;
   onPick: (h: SearchHit) => void;
   favs: SearchHit[];
+  lang: Lang;
 }) {
+  const T = (ja: string) => t(lang, ja);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const hits = useMemo(() => (q ? search(data, q) : []), [data, q]);
@@ -1807,13 +1888,13 @@ function Field({
                 }}
                 className="w-full px-4 py-2.5 text-left text-sm font-semibold text-blue-600 transition hover:bg-slate-50"
               >
-                現在地を使う
+                {T("現在地を使う")}
               </button>
             </li>
           )}
           {shownFavs.length > 0 && (
             <li className="bg-amber-50 px-4 py-1 text-[10px] font-bold text-amber-700">
-              ★ お気に入り
+              {T("★ お気に入り")}
             </li>
           )}
           {shownFavs.map((h) => (
