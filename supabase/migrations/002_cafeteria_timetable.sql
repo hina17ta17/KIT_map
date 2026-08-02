@@ -5,7 +5,7 @@
 --
 -- ■ このファイルで決めること
 --   1. 食堂  … 提供口の「開いているか」と、枠に入る「品名」を分けて持つ
---   2. 時間割 … 授業とプロジェクト活動を一つの表に入れ、
+--   2. 時間割 … 授業と課外活動を一つの表に入れ、
 --                同じ教室の同じ時間に二つ入らないようにする
 --   3. 空き教室 … 上の表から「使われていない」を引き算して出す
 
@@ -158,10 +158,40 @@ on conflict (cafeteria_id, name) do nothing;
 
 
 -- ===============================================================
--- 2. プロジェクト活動の団体
+-- 2. 課外活動の団体
+--
+--    はじめ projects という名前で作っていたので、
+--    もう作ってしまっている場合は名前を付け替える。
+--    どちらの状態から実行しても同じ形になる。
 -- ===============================================================
 
-create table if not exists public.projects (
+do $rename$
+declare
+  n_act int := 0;
+  n_tt  int := 0;
+begin
+  if to_regclass('public.projects') is null then
+    return;                       -- 前の版を実行していない。何もしない
+  end if;
+
+  execute 'select count(*) from public.projects' into n_act;
+  if to_regclass('public.timetable') is not null then
+    execute 'select count(*) from public.timetable' into n_tt;
+  end if;
+
+  -- 中身が無ければ作り直す。列名も check の中身も一度に正しくなる
+  if n_act = 0 and n_tt = 0 then
+    drop table if exists public.timetable cascade;
+    drop table if exists public.projects  cascade;
+    raise notice '前の版の projects / timetable を作り直しました';
+  else
+    raise exception
+      '前の版の projects(%行) か timetable(%行) に中身があります。'
+      '移し終えてから、この二つを削除して実行し直してください', n_act, n_tt;
+  end if;
+end $rename$;
+
+create table if not exists public.club_activities (
   id     bigint generated always as identity primary key,
   name   text not null unique,
   leader text not null default '',
@@ -170,11 +200,11 @@ create table if not exists public.projects (
 
 
 -- ===============================================================
--- 3. 時間割（授業とプロジェクト活動）
+-- 3. 時間割（授業と課外活動）
 --
 --    ■ なぜ一つの表にまとめたか
 --
---    「同じ時間に授業とプロジェクト活動を被らせない」を守るには、
+--    「同じ時間に授業と課外活動を被らせない」を守るには、
 --    両方が同じ表に入っている必要がある。別々の表に分けると、
 --    データベースには二つをまたいで重なりを禁じる手立てが無く、
 --    画面側の確認だけが頼りになる。人の書き方や通信の行き違いで
@@ -187,12 +217,12 @@ create table if not exists public.timetable (
   room_id     bigint not null references public.rooms on delete cascade,
 
   -- class   … 授業
-  -- project … プロジェクト活動
-  kind        text not null check (kind in ('class','project')),
+  -- activity … 課外活動
+  kind        text not null check (kind in ('class','activity')),
   course_id   bigint references public.courses  on delete cascade,
-  project_id  bigint references public.projects on delete cascade,
+  activity_id  bigint references public.club_activities on delete cascade,
 
-  -- 授業は限で入れる。プロジェクト活動は限に収まらないことがあるので任意
+  -- 授業は限で入れる。課外活動は限に収まらないことがあるので任意
   period_id   smallint references public.periods,
   -- 実際の時刻。限だけ入れた場合は下の仕掛けが periods から埋める
   starts_at   time not null,
@@ -211,8 +241,8 @@ create table if not exists public.timetable (
 
   -- 種類に合ったものを指しているか
   check (
-    (kind = 'class'   and course_id  is not null and project_id is null) or
-    (kind = 'project' and project_id is not null and course_id  is null)
+    (kind = 'class'   and course_id  is not null and activity_id is null) or
+    (kind = 'activity' and activity_id is not null and course_id  is null)
   ),
   check (ends_at > starts_at),
 
@@ -342,7 +372,7 @@ $$;
 alter table public.cafeteria_items enable row level security;
 alter table public.counter_days    enable row level security;
 alter table public.menu_days       enable row level security;
-alter table public.projects        enable row level security;
+alter table public.club_activities        enable row level security;
 alter table public.timetable       enable row level security;
 
 drop policy if exists "items read"    on public.cafeteria_items;
@@ -351,8 +381,8 @@ drop policy if exists "counter read"  on public.counter_days;
 drop policy if exists "counter write" on public.counter_days;
 drop policy if exists "menu read"     on public.menu_days;
 drop policy if exists "menu write"    on public.menu_days;
-drop policy if exists "projects read"  on public.projects;
-drop policy if exists "projects write" on public.projects;
+drop policy if exists "activities read"  on public.club_activities;
+drop policy if exists "activities write" on public.club_activities;
 drop policy if exists "tt read"       on public.timetable;
 drop policy if exists "tt insert"     on public.timetable;
 drop policy if exists "tt update"     on public.timetable;
@@ -361,7 +391,7 @@ drop policy if exists "tt delete"     on public.timetable;
 create policy "items read"   on public.cafeteria_items for select using (public.role_rank() >= 1);
 create policy "counter read" on public.counter_days    for select using (public.role_rank() >= 1);
 create policy "menu read"    on public.menu_days       for select using (public.role_rank() >= 1);
-create policy "projects read" on public.projects       for select using (public.role_rank() >= 1);
+create policy "activities read" on public.club_activities       for select using (public.role_rank() >= 1);
 create policy "tt read"      on public.timetable       for select using (public.role_rank() >= 1);
 
 -- 食堂は Lv3 が管理する
@@ -373,14 +403,14 @@ create policy "menu write"    on public.menu_days
   for all using (public.role_rank() >= 4) with check (public.role_rank() >= 4);
 
 -- 団体の登録は Lv2 以上
-create policy "projects write" on public.projects
+create policy "activities write" on public.club_activities
   for all using (public.role_rank() >= 3) with check (public.role_rank() >= 3);
 
--- 授業は Lv2 以上、プロジェクト活動は Lv1 以上
+-- 授業は Lv2 以上、課外活動は Lv1 以上
 create policy "tt insert" on public.timetable
   for insert with check (
     (kind = 'class'   and public.role_rank() >= 3) or
-    (kind = 'project' and public.role_rank() >= 2)
+    (kind = 'activity' and public.role_rank() >= 2)
   );
 
 -- 自分が入れたものは自分で直せる。Lv3 は全部直せる
@@ -395,7 +425,7 @@ create policy "tt delete" on public.timetable
 --
 --    reservations（教室の予約）は timetable と役割が重なる。
 --    教室が空いているかの判断は timetable だけを見るようにしたので、
---    予約も timetable に kind='project' で入れるのがよい。
+--    予約も timetable に kind='activity' で入れるのがよい。
 --
 --    中身を移し終えたら、次の一行で消せる：
 --      drop table if exists public.reservations;

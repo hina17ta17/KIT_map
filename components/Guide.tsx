@@ -540,6 +540,57 @@ export default function Guide() {
     }
   }, [fix, route, trip]);
 
+  /**
+   * 経路が出たら、道すじ全体が入るところまで引く。
+   *
+   * 出発地に寄ったままだと、どこへ向かうのかが画面の外で分からない。
+   * 同じ経路で何度も動かすと操作の邪魔になるので、
+   * 道すじが変わったときだけ動かす。
+   */
+  const fittedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!trip) {
+      fittedFor.current = null;
+      return;
+    }
+    if (!map || !route || "error" in route || !graph) return;
+
+    const key = route.path.join(">");
+    if (fittedFor.current === key) return;
+    fittedFor.current = key;
+
+    let w = Infinity,
+      s = Infinity,
+      e = -Infinity,
+      n = -Infinity;
+    const add = (c: Position) => {
+      if (c[0] < w) w = c[0];
+      if (c[0] > e) e = c[0];
+      if (c[1] < s) s = c[1];
+      if (c[1] > n) n = c[1];
+    };
+    for (const id of route.path) {
+      const q = graph.pos.get(id);
+      if (q) add(q);
+    }
+    add(route.goal.geometry.coordinates);
+    if (!Number.isFinite(w)) return;
+
+    map.fitBounds(
+      [
+        [w, s],
+        [e, n],
+      ],
+      {
+        // 上はボタン、下は案内の帯と建物一覧が重なるので、その分を空ける
+        padding: { top: 140, bottom: 200, left: 56, right: 56 },
+        maxZoom: 18,
+        duration: 800,
+      },
+    );
+  }, [trip, route, graph]);
+
   /* ---------------- 画面座標 ---------------- */
 
   const highlight = useMemo(() => {
@@ -778,10 +829,6 @@ export default function Guide() {
           {view.start && (
             <circle cx={view.start.x} cy={view.start.y} r={8} fill="#ffffff" stroke="#38bdf8" strokeWidth={4} />
           )}
-          {view.goal && (
-            <circle cx={view.goal.x} cy={view.goal.y} r={10} fill="#f97316" stroke="#ffffff" strokeWidth={3.5} />
-          )}
-
           {view.me && (
             <>
               <circle cx={view.me.x} cy={view.me.y} r={view.meR} fill="#38bdf8" fillOpacity={0.12} />
@@ -795,6 +842,24 @@ export default function Guide() {
                 opacity={fix && fix.accuracy <= ACC_TRUST ? 1 : 0.55}
               />
             </>
+          )}
+
+          {/* 目的地。ひと目で分かるよう、赤いピンを大きく立てる。
+              現在地より手前に描いて隠れないようにする */}
+          {view.goal && (
+            <g transform={`translate(${view.goal.x},${view.goal.y})`}>
+              {/* 地面の影。浮いて見えると場所が曖昧になる */}
+              <ellipse cx={0} cy={1} rx={10} ry={4} fill="#0f172a" opacity={0.28} />
+              {/* しずく形。とがった先が目的地を指す */}
+              <path
+                d="M0 0 C -7 -13, -18 -22, -18 -34 A 18 18 0 1 1 18 -34 C 18 -22, 7 -13, 0 0 Z"
+                fill="#ef4444"
+                stroke="#ffffff"
+                strokeWidth={3.5}
+                strokeLinejoin="round"
+              />
+              <circle cx={0} cy={-34} r={6.5} fill="#ffffff" />
+            </g>
           )}
         </svg>
       )}
