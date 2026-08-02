@@ -111,6 +111,7 @@ export default function AdminPage() {
         <h1 className="text-lg font-bold text-slate-900">承認・権限の管理</h1>
         <div className="flex gap-3 text-xs font-semibold text-slate-500">
           <Link href="/admin/rooms" className="hover:text-slate-800">教室の登録</Link>
+          <Link href="/admin/schedule" className="hover:text-slate-800">予定の登録</Link>
           <Link href="/" className="hover:text-slate-800">地図へ</Link>
         </div>
       </div>
