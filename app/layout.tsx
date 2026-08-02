@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KIT MAP — 作図ツール",
-  description: "金沢工業大学キャンパスマップ：敷地・建物ポリゴンの作図ツール",
+  // タブに出る名前。案内画面が入口なのでこれだけにする
+  title: "KIT map",
+  description: "金沢工業大学 扇が丘キャンパスの案内マップ",
 };
 
 export default function RootLayout({

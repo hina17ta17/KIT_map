@@ -6,8 +6,11 @@
 
 export type BaseId = "pale" | "photo" | "std";
 
-export const GSI_ATTRIBUTION =
-  '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noreferrer">地理院タイル</a>';
+/**
+ * 出典表示。地理院タイルの利用条件で「出典の明示」が必須。
+ * リンクにはせず文字だけにしてある（明示していれば条件を満たす）。
+ */
+export const GSI_ATTRIBUTION = "地理院タイル";
 
 export const BASES: Record<
   BaseId,

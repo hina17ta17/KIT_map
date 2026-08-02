@@ -18,7 +18,26 @@ body {
     sans-serif;
 }
 
-/* MapLibre の出典表示を少し小さくして地図を広く使う */
+/* MapLibre の出典表示を少し小さくして地図を広く使う。
+   地理院タイルの利用条件で必須なので、消さずに控えめに出す */
 .maplibregl-ctrl-attrib {
   font-size: 10px;
+}
+
+/* 起動時のタイトル画面のアニメーション */
+@keyframes kitFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes kitRise {
+  from { opacity: 0; transform: translateY(14px); letter-spacing: 0.5em; }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes kitWiden {
+  from { opacity: 0; width: 0; }
+  to { opacity: 1; width: 6rem; }
+}
+@keyframes kitBlink {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.7; }
 }

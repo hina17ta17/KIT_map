@@ -31,7 +31,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+# ★実際のキーが入る .env* は追跡しない。
+#   値の入っていない雛形（.env.local.example）だけは共有したいので除外する。
 .env*
+!.env.local.example
 
 # vercel
 .vercel
