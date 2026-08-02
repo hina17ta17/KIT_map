@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
+import { AdminMenu } from "@/components/AdminNav";
 import {
   ROLE_LABEL,
   checkPassword,
@@ -149,17 +150,14 @@ export default function LoginPage() {
                 まだ承認されていません。管理者が承認すると学内情報が見られるようになります。
               </p>
             )}
-            {me.role === "admin_l3" && (
-              <Link
-                href="/admin"
-                className="mt-4 block w-full rounded-xl bg-slate-900 px-4 py-3 text-center text-sm font-bold text-white"
-              >
-                承認・権限の管理へ
-              </Link>
-            )}
+            {/* 使える管理画面だけを並べる。権限が無ければ何も出ない */}
+            <div className="mt-4">
+              <AdminMenu role={me.role} />
+            </div>
+
             <Link
               href="/"
-              className="mt-2 block w-full rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-700"
+              className="block w-full rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-700"
             >
               地図へ戻る
             </Link>

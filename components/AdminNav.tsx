@@ -7,8 +7,8 @@
  * どこへ行けるのかも分かりにくかった。
  * 見出しの右上には必ず「地図へ」を置き、行き先は上から縦に並べる。
  *
- * 権限で使えないものは押せない形で見せる。隠してしまうと
- * 「自分には無い機能」なのか「壊れている」のか分からないため。
+ * 権限が足りないものは出さない。押せないものが並んでいても迷うだけなので、
+ * その人が使えるものだけを見せる。
  */
 
 import Link from "next/link";
@@ -23,7 +23,6 @@ type Entry = {
   label: string;
   sub: string;
   allowed: (role: Role | null) => boolean;
-  need: string;
 };
 
 const ENTRIES: Entry[] = [
@@ -34,7 +33,6 @@ const ENTRIES: Entry[] = [
     label: "承認・権限の管理",
     sub: "利用申請の承認と、権限の変更",
     allowed: canManage,
-    need: "Lv3",
   },
   {
     id: "rooms",
@@ -43,7 +41,6 @@ const ENTRIES: Entry[] = [
     label: "教室の登録",
     sub: "何号館の何階に、どの教室があるか",
     allowed: (r) => r === "admin_l3",
-    need: "Lv3",
   },
   {
     id: "schedule",
@@ -52,7 +49,6 @@ const ENTRIES: Entry[] = [
     label: "予定の登録",
     sub: "授業・イベント・課外活動",
     allowed: (r) => r === "admin_l1" || r === "admin_l2" || r === "admin_l3",
-    need: "Lv1以上",
   },
   {
     id: "cafeteria",
@@ -61,7 +57,6 @@ const ENTRIES: Entry[] = [
     label: "食堂のメニュー",
     sub: "その日の提供状況と品名",
     allowed: canManageCafeteria,
-    need: "Lv0・Lv3",
   },
 ];
 
@@ -80,19 +75,26 @@ export function AdminHeader({ title }: { title: string }) {
   );
 }
 
-/** 行き先を上から縦に並べる */
+/**
+ * 行き先を上から縦に並べる。
+ *
+ * 使える権限のあるものだけを出す。current を渡さなければ、
+ * どこも「開いている」扱いにしない（ログイン画面から使うときなど）。
+ */
 export function AdminMenu({
   current,
   role,
 }: {
-  current: AdminPageId;
+  current?: AdminPageId;
   role: Role | null;
 }) {
+  const usable = ENTRIES.filter((e) => e.allowed(role));
+  if (usable.length === 0) return null;
+
   return (
     <nav className="mb-4 flex flex-col gap-2">
-      {ENTRIES.map((e) => {
+      {usable.map((e) => {
         const here = e.id === current;
-        const ok = e.allowed(role);
 
         if (here) {
           return (
@@ -104,23 +106,6 @@ export function AdminMenu({
               <span className="min-w-0">
                 <span className="block text-sm font-bold text-white">{e.label}</span>
                 <span className="block text-[10px] text-slate-300">いま開いています</span>
-              </span>
-            </div>
-          );
-        }
-
-        if (!ok) {
-          return (
-            <div
-              key={e.id}
-              className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-3 text-left"
-            >
-              <span className="text-lg opacity-40">{e.icon}</span>
-              <span className="min-w-0">
-                <span className="block text-sm font-bold text-slate-400">{e.label}</span>
-                <span className="block text-[10px] text-slate-400">
-                  {e.need} の権限が必要です
-                </span>
               </span>
             </div>
           );
