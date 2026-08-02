@@ -46,6 +46,7 @@ type Conflict = {
 /** その日にすでに入っている予定 */
 type Booked = {
   id: number;
+  room_id: number;
   kind: Kind;
   title: string;
   starts_at: string;
@@ -223,6 +224,39 @@ export default function SchedulePage() {
     [depts, deptId],
   );
 
+  /** いま入れようとしている時間帯。まだ決まっていなければ null */
+  const slot = useMemo(() => {
+    if (kind === "class") {
+      const p = periods.find((x) => x.id === periodId);
+      return p ? { s: p.starts_at, e: p.ends_at } : null;
+    }
+    return startAt && endAt && endAt > startAt ? { s: startAt, e: endAt } : null;
+  }, [kind, periodId, periods, startAt, endAt]);
+
+  /**
+   * その時間帯にもう予定が入っている教室。
+   *
+   * 押してから「入れられません」と言われるのでは分かりにくいので、
+   * 選ぶ時点で塞ぐ。最後に守っているのはデータベースの決まりで、
+   * 同じ教室の同じ時間には一つしか入らない。
+   */
+  const takenRooms = useMemo(() => {
+    const m = new Map<number, Booked>();
+    if (!slot) return m;
+    for (const b of booked) {
+      // 時刻は "08:40:00" の形なので、文字のまま比べれば前後が分かる
+      if (b.starts_at < `${slot.e}:00`.slice(0, 8) && `${slot.s}:00`.slice(0, 8) < b.ends_at) {
+        m.set(b.room_id, b);
+      }
+    }
+    return m;
+  }, [booked, slot]);
+
+  /* 時間帯を変えたら、その時間に使えない教室は外す */
+  useEffect(() => {
+    setRoomIds((prev) => prev.filter((id) => !takenRooms.has(id)));
+  }, [takenRooms]);
+
   /* ---------------- 登録 ---------------- */
 
   /**
@@ -377,7 +411,7 @@ export default function SchedulePage() {
     if (!supabaseReady) return;
     const { data } = await createClient()
       .from("timetable")
-      .select("id, kind, title, starts_at, ends_at, teacher, rooms(building_code, code, name), courses(name, class_name), club_activities(name)")
+      .select("id, room_id, kind, title, starts_at, ends_at, teacher, rooms(building_code, code, name), courses(name, class_name), club_activities(name)")
       .eq("on_date", date)
       .order("starts_at");
     setBooked((data as unknown as Booked[]) ?? []);
@@ -551,11 +585,15 @@ export default function SchedulePage() {
           {roomsInScope.length > 0 && (
             <>
               <div className="mt-1.5 flex gap-1.5">
+                {/* すでに使われている教室は、まとめて選ぶときも含めない */}
                 <button
-                  onClick={() => setRoomIds(roomsInScope.map((r) => r.id))}
+                  onClick={() =>
+                    setRoomIds(roomsInScope.filter((r) => !takenRooms.has(r.id)).map((r) => r.id))
+                  }
                   className="flex-1 rounded-lg bg-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-300"
                 >
-                  選んだ号館の教室をすべて選ぶ（{roomsInScope.length}室）
+                  空いている教室をすべて選ぶ（
+                  {roomsInScope.filter((r) => !takenRooms.has(r.id)).length}室）
                 </button>
                 <button
                   onClick={() => setRoomIds([])}
@@ -570,37 +608,49 @@ export default function SchedulePage() {
               <ul className="mt-1.5 max-h-52 overflow-y-auto rounded-xl bg-slate-50 p-1.5">
                 {roomsInScope.slice(0, 300).map((r) => {
                   const on = roomIds.includes(r.id);
+                  const taken = takenRooms.get(r.id);
                   return (
                     <li key={r.id}>
                       <button
+                        disabled={!!taken}
                         onClick={() =>
                           setRoomIds((prev) =>
                             on ? prev.filter((x) => x !== r.id) : [...prev, r.id],
                           )
                         }
                         className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition ${
-                          on ? "bg-blue-600 text-white" : "hover:bg-white"
+                          taken
+                            ? "cursor-not-allowed opacity-50"
+                            : on
+                              ? "bg-blue-600 text-white"
+                              : "hover:bg-white"
                         }`}
                       >
                         <span
                           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
-                            on ? "bg-white text-blue-600" : "bg-white text-transparent ring-1 ring-slate-300"
+                            taken
+                              ? "bg-slate-200 text-slate-400"
+                              : on
+                                ? "bg-white text-blue-600"
+                                : "bg-white text-transparent ring-1 ring-slate-300"
                           }`}
                         >
-                          ✓
+                          {taken ? "×" : "✓"}
                         </span>
                         {buildingCodes.length > 1 && (
                           <span
-                            className={`w-10 shrink-0 text-[10px] ${on ? "text-blue-100" : "text-slate-400"}`}
+                            className={`w-10 shrink-0 text-[10px] ${on && !taken ? "text-blue-100" : "text-slate-400"}`}
                           >
                             {r.building_code}号
                           </span>
                         )}
                         <span className="w-14 shrink-0 text-xs font-bold">{r.code}</span>
                         <span
-                          className={`min-w-0 truncate text-[11px] ${on ? "text-blue-100" : "text-slate-500"}`}
+                          className={`min-w-0 truncate text-[11px] ${on && !taken ? "text-blue-100" : "text-slate-500"}`}
                         >
-                          {r.name || "（部屋名なし）"}
+                          {taken
+                            ? `使用中：${KIND_LABEL[taken.kind]}`
+                            : r.name || "（部屋名なし）"}
                         </span>
                       </button>
                     </li>
@@ -875,9 +925,9 @@ export default function SchedulePage() {
         )}
 
         <p className="border-t border-slate-100 pt-3 text-[10px] leading-relaxed text-slate-400">
+          一つの教室の一つの時間に入るのは一つだけです。学科が違っても重ねられません。
           優先順位は 授業 ＞ イベント ＞ 課外活動。
           同じ強さどうしは、先に入れたものが残ります。
-          授業が入っている時間には、イベントも課外活動も登録できません。
         </p>
 
         {/* ---- この日に入っている予定。間違えて入れたものを消せる ---- */}
