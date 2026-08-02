@@ -20,6 +20,7 @@ import { categoryOf, type CheckpointFeature } from "@/lib/features";
 import { loadAppData, loadRooms, search, type AppData, type SearchHit } from "@/lib/appdata";
 import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
 import { buildGraph, buildSteps, findPath, nearestNode } from "@/lib/route";
+import CampusPanel from "./CampusPanel";
 import { metersBetween } from "@/lib/geo";
 
 /** 精度の扱い。推測で決めず3段階に分ける */
@@ -949,30 +950,17 @@ export default function Guide() {
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "-translate-y-[6px] -rotate-45" : ""}`} />
           </button>
 
+          {/* 中はカレンダーから始まる。狭いと日が押しにくいので広めに取り、
+              画面に収まらない分はこの中だけで送る */}
           {side && (
-            <div className="w-52 rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur">
-              <div className="mb-2 text-[11px] font-bold text-slate-500">学内の情報</div>
-              <div className="flex flex-col gap-1">
-                {["食堂のメニュー", "授業予定", "空き教室"].map((label) => (
-                  <button
-                    key={label}
-                    onClick={() => setLogin(true)}
-                    className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                  >
-                    {label}
-                    <span className="text-xs text-slate-400">🔒</span>
-                  </button>
-                ))}
+            <div
+              className="flex w-[min(20rem,calc(100vw-6rem))] flex-col rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur"
+              style={{ maxHeight: "calc(100dvh - 8rem)" }}
+            >
+              <div className="mb-2 shrink-0 text-[11px] font-bold text-slate-500">学内の情報</div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <CampusPanel role={role} onNeedLogin={() => setLogin(true)} />
               </div>
-              <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] leading-relaxed text-slate-500">
-                閲覧には管理者の承認が必要です。
-              </p>
-              <button
-                onClick={() => setLogin(true)}
-                className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
-              >
-                ログイン
-              </button>
             </div>
           )}
         </div>
