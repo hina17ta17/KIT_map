@@ -38,9 +38,15 @@ export const BASES: Record<
 
 export const BASE_ORDER: BaseId[] = ["pale", "photo", "std"];
 
-/** 初期表示位置。扇が丘キャンパス周辺のおおよその中心（実データ作成時に調整する） */
+/**
+ * 初期表示位置。
+ *
+ * 1号館（136.62794, 36.53051）と金沢工業大学前バス停（136.62841, 36.52968）の
+ * 中点に置く。二点は102m しか離れておらず、起動時の縮尺なら両方が画面に入る。
+ * バス停で降りた人が、そのまま1号館まで見渡せる位置。
+ */
 export const INITIAL_VIEW = {
-  center: [136.6294, 36.5316] as [number, number],
+  center: [136.6282, 36.5301] as [number, number],
   zoom: 16,
 };
 
