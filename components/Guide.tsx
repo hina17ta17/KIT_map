@@ -936,6 +936,20 @@ export default function Guide() {
     (id: string, label: string, ring: Position[]) => {
       const hit: SearchHit = { buildingId: id, title: label, sub: "", score: 0 };
 
+      /*
+       * 現在地が取れているなら、押した建物までそのまま案内する。
+       * 自分がどこにいるか分かっている以上、出発地を選ばせるのは
+       * 一手間よけいなだけ。二つ押させる形は、現在地が無いときに残す。
+       */
+      if (fix && !pickedFrom) {
+        setTrip({ origin: { kind: "me" }, dest: hit });
+        setOrigin({ kind: "me" });
+        setDest(hit);
+        setArrived(false);
+        setFocusId(id);
+        return;
+      }
+
       if (!pickedFrom) {
         setPickedFrom(hit);
         setTrip(null);
@@ -958,7 +972,7 @@ export default function Guide() {
       setPickedFrom(null);
       setFocusId(id);
     },
-    [pickedFrom, focusBuilding],
+    [pickedFrom, fix, focusBuilding],
   );
 
   const view = useMemo(() => {
@@ -1259,17 +1273,53 @@ export default function Guide() {
 
       {/* 左上に縦に積む。重なりが起きないよう1つの列にまとめる */}
       <div className="absolute left-4 top-4 z-10 flex w-fit max-w-[16rem] flex-col items-start gap-2">
-        <button
-          onClick={startWatch}
-          className="flex items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
-        >
-          <span
-            className={`inline-block h-2.5 w-2.5 rounded-full ${
-              geoState === "on" ? "bg-blue-500" : geoState === "asking" ? "bg-amber-400" : "bg-slate-300"
-            }`}
-          />
-          {T("現在地")}
-        </button>
+        {/* 現在地と、その状態を横に並べる。
+            状態を下の段に置くと、地図が見える面積を余計に削るため */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={startWatch}
+            className="flex shrink-0 items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          >
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full ${
+                geoState === "on"
+                  ? "bg-blue-500"
+                  : geoState === "asking"
+                    ? "bg-amber-400"
+                    : geoState === "rough"
+                      ? "bg-amber-500"
+                      : "bg-slate-300"
+              }`}
+            />
+            {T("現在地")}
+          </button>
+
+          {/* 順調なあいだは短く。うまくいかないときだけ下に詳しく出す */}
+          {geoState === "asking" && (
+            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-amber-600 shadow-sm backdrop-blur">
+              {lang === "en" ? "Finding…" : "取得中…"}
+            </span>
+          )}
+          {(geoState === "on" || geoState === "rough") && (
+            <span
+              className={`rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur ${
+                geoState === "on" ? "text-emerald-600" : "text-amber-600"
+              }`}
+              title={
+                geoState === "on"
+                  ? T("衛星で測れています（GPS・みちびき等）")
+                  : T("いまは Wi-Fi や基地局からの推定です。空の見える場所で少し待つと、衛星に切り替わります")
+              }
+            >
+              {geoState === "on" ? "🛰" : "📶"} ±{Math.round(fix?.accuracy ?? 0)}m
+            </span>
+          )}
+          {geoState === "on" && inCampus === false && (
+            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur">
+              {T("圏外（キャンパス外）")}
+            </span>
+          )}
+        </div>
 
         <button
           onClick={() => setPanel(true)}
@@ -1333,33 +1383,13 @@ export default function Guide() {
           </div>
         )}
 
-        {/* 現在地の状態。原因ごとに何をすればよいか分かるように出す */}
-        {geoState !== "idle" && (
+        {/* うまくいかないときだけ、原因と次の手を詳しく出す。
+            順調なあいだは現在地の横の短い表示だけで足りる */}
+        {(geoState === "denied" ||
+          geoState === "timeout" ||
+          geoState === "unavailable" ||
+          geoState === "insecure") && (
           <div className="max-w-[16rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
-            {geoState === "asking" && "現在地を取得中…（初回は30秒ほどかかります）"}
-            {geoState === "rough" && (
-              <>
-                精度を上げています… ±{Math.round(fix?.accuracy ?? 0)}m
-                <span className="block text-[10px] text-slate-400">
-                  いまは Wi-Fi や基地局からの推定です。
-                  空の見える場所で少し待つと、衛星に切り替わります
-                </span>
-              </>
-            )}
-            {/* 精度から、衛星で測れているのか電波からの推定なのかを伝える。
-                どの衛星を使ったかはブラウザからは分からないが、
-                この精度なら衛星が効いている、という目安にはなる */}
-            {geoState === "on" &&
-              (inCampus === false ? (
-                "圏外（キャンパス外）"
-              ) : (
-                <>
-                  ±{Math.round(fix?.accuracy ?? 0)}m
-                  <span className="block text-[10px] text-emerald-600">
-                    衛星で測れています（GPS・みちびき等）
-                  </span>
-                </>
-              ))}
             {geoState === "denied" && (
               <>
                 現在地が拒否されています
