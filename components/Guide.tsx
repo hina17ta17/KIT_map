@@ -213,7 +213,25 @@ export default function Guide() {
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ maxWidth: 90, unit: "metric" }), "top-right");
 
-    const bump = () => setTick((v) => v + 1);
+    /*
+     * 描き直しの合図。1フレームに1回までにまとめる。
+     *
+     * 指で拡大縮小しているあいだ、MapLibre は move と zoom を
+     * どちらも毎フレーム出す。そのまま受けると1フレームに2回、
+     * 画面全体を組み直すことになる。組み直しは指の操作と同じ流れで
+     * 起きるので、指を動かしているあいだじゅう処理が詰まり、
+     * 固まったように見えていた。
+     *
+     * 合図が何回来ても、次に描くときの1回にまとめる。
+     */
+    let raf = 0;
+    const bump = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setTick((v) => v + 1);
+      });
+    };
     for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) map.on(ev, bump);
     map.on("load", () => setReady(true));
 
@@ -230,7 +248,27 @@ export default function Guide() {
       bump();
     };
 
-    const ro = new ResizeObserver(fit);
+    /*
+     * 大きさが本当に変わったときだけ測り直す。
+     *
+     * resize() は canvas の大きさを書き換えるので、そのまま呼び返すと
+     * ResizeObserver がまた鳴る。1px でも揺れ続けると、測り直しと
+     * 描き直しが延々と往復して止まらなくなる。
+     */
+    let lastW = 0;
+    let lastH = 0;
+    const onResize = () => {
+      const el = boxRef.current;
+      if (!el) return;
+      const w = Math.round(el.clientWidth);
+      const h = Math.round(el.clientHeight);
+      if (w === lastW && h === lastH) return;
+      lastW = w;
+      lastH = h;
+      fit();
+    };
+
+    const ro = new ResizeObserver(onResize);
     ro.observe(boxRef.current);
     window.addEventListener("resize", fit);
     window.addEventListener("orientationchange", fit);
@@ -245,6 +283,7 @@ export default function Guide() {
       window.removeEventListener("orientationchange", fit);
       window.visualViewport?.removeEventListener("resize", fit);
       timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
       map.remove();
       mapRef.current = null;
     };
