@@ -29,12 +29,48 @@ export function isAllowedEmail(email: string): boolean {
   return ALLOWED_DOMAINS.includes(domain);
 }
 
-/** パスワードは半角10桁ちょうど */
+/** パスワードは半角8桁ちょうど */
+export const PASSWORD_LENGTH = 8;
+
 export function checkPassword(pw: string): string | null {
-  if (pw.length !== 10) return "パスワードは10桁ちょうどにしてください";
+  if (pw.length !== PASSWORD_LENGTH)
+    return `パスワードは${PASSWORD_LENGTH}桁ちょうどにしてください`;
   if (!/^[\x21-\x7e]+$/.test(pw)) return "半角の英数字・記号だけで入力してください";
   return null;
 }
+
+/** 学年。申請のときに選ぶ */
+export const GRADES = [1, 2, 3, 4] as const;
+
+/** 組。申請のときに選ぶ */
+export const GROUPS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+/**
+ * クラス記号。学科ごとに決まっている。
+ *
+ * departments.code と同じ並び。ここに直書きしているのは、
+ * 申請の画面がログイン前に出るため。ログインしていないと
+ * RLS で departments を読めず、選択肢が空になってしまう。
+ */
+export const CLASS_CODES = [
+  { code: "KM", name: "機械工学科" },
+  { code: "KS", name: "先進機械システム工学科" },
+  { code: "KA", name: "航空宇宙工学科" },
+  { code: "KE", name: "電気エネルギーシステム工学科" },
+  { code: "KI", name: "電子情報システム工学科" },
+  { code: "KC", name: "環境土木工学科" },
+  { code: "CC", name: "情報工学科" },
+  { code: "CA", name: "知能情報システム学科" },
+  { code: "CR", name: "ロボティクス学科" },
+  { code: "DM", name: "経営情報学科" },
+  { code: "DE", name: "環境デザイン創成学科" },
+  { code: "MM", name: "メディア情報学科" },
+  { code: "MP", name: "心理情報デザイン学科" },
+  { code: "AE", name: "建築学科" },
+  { code: "AD", name: "建築デザイン学科" },
+  { code: "BE", name: "環境・応用化学科" },
+  { code: "BS", name: "生命・応用バイオ学科" },
+] as const;
 
 export const ROLE_LABEL: Record<Role, string> = {
   pending: "承認待ち",

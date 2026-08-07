@@ -119,6 +119,8 @@ export default function Guide() {
   const watchId = useRef<number | null>(null);
   /** 応答が無いまま黙るのを防ぐための見張り */
   const retryTimer = useRef<number | null>(null);
+  /** 現在地へ一度寄せたか。やめたら戻す */
+  const centeredRef = useRef(false);
 
   /** 起動時のタイトル画面。0.4秒かけて上下に割れる */
   const [splash, setSplash] = useState<"open" | "closing" | "done">("open");
@@ -481,7 +483,35 @@ export default function Guide() {
    *  ・一度失敗したあと押し直しても何も起きない状態になりやすいので、
    *    位置がまだ無いときは前の監視を止めて必ずやり直す
    */
+  /**
+   * 現在地をやめる。
+   *
+   * 追従を止めて、位置も向きも消す。
+   * 出したままにしたくない場面（人に画面を見せるときなど）で使う。
+   */
+  const stopWatch = useCallback(() => {
+    if (watchId.current != null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
+    }
+    if (retryTimer.current != null) {
+      clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    }
+    setFix(null);
+    setHeading(null);
+    setGeoState("idle");
+    // 次に押したときは、また現在地へ寄せてよい
+    centered.current = false;
+  }, []);
+
   const startWatch = useCallback(() => {
+    // すでに出ているなら、もう一度押したら消す
+    if (fix || geoState === "on" || geoState === "rough" || geoState === "asking") {
+      stopWatch();
+      return;
+    }
+
     // 押した時点で描画面を測り直す。
     // 許可ダイアログでアドレスバーの高さが変わり、地図が半分のまま残るのを防ぐ
     mapRef.current?.resize();
@@ -498,12 +528,8 @@ export default function Guide() {
       return;
     }
 
-    // すでに位置が取れていて追従中なら、そこへ寄せるだけ
-    if (watchId.current != null && fix) {
-      mapRef.current?.easeTo({ center: [fix.pos[0], fix.pos[1]], zoom: 18 });
-      return;
-    }
-    // 取れていないのに監視だけ残っている＝失敗している。止めてやり直す
+    // ここへ来る時点で位置は取れていない（取れていれば上で止めている）。
+    // 監視だけ残っているなら失敗しているので、止めてやり直す
     if (watchId.current != null) {
       navigator.geolocation.clearWatch(watchId.current);
       watchId.current = null;
@@ -564,7 +590,7 @@ export default function Guide() {
         return cur;
       });
     }, 32_000);
-  }, [fix, accept, startCompass]);
+  }, [fix, geoState, accept, startCompass, stopWatch]);
 
   /** 許可の状態を先に調べて、拒否されているなら押す前に伝える */
   useEffect(() => {
@@ -589,37 +615,12 @@ export default function Guide() {
     [],
   );
 
-  /** 起動時はキャンパス全体が入るように合わせる */
-  const fitted = useRef(false);
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !data || fitted.current) return;
-    const feats = data.buildings.features;
-    if (feats.length === 0) return;
-    fitted.current = true;
-    let w = Infinity,
-      s = Infinity,
-      e = -Infinity,
-      n = -Infinity;
-    for (const f of feats) {
-      for (const [lon, lat] of f.geometry.coordinates[0]) {
-        if (lon < w) w = lon;
-        if (lon > e) e = lon;
-        if (lat < s) s = lat;
-        if (lat > n) n = lat;
-      }
-    }
-    map.fitBounds(
-      [
-        [w, s],
-        [e, n],
-      ],
-      { padding: 48, duration: 0 },
-    );
-  }, [ready, data]);
+  /* 起動時の画角合わせは fitHome にまとめてある（下の framed の効果）。
+     以前ここにもう一つ同じ処理があり、駅を含む広い枠に一度合わせてから
+     すぐ組み直していた。二重なので消した。 */
 
-  /** 現在地が取れたら一度だけ寄せる */
-  const centered = useRef(false);
+  /** 現在地が取れたら一度だけ寄せる。やめたら false に戻す */
+  const centered = centeredRef;
   useEffect(() => {
     if (fix && !centered.current) {
       centered.current = true;
@@ -636,37 +637,46 @@ export default function Guide() {
    *
    * 一度だけ。現在地が取れたり案内を始めたりしたら、そちらを優先する。
    */
+  /** 起動時の画角に合わせる。ボタンからも呼べるようにしてある */
+  const fitHome = useCallback(
+    (duration = 0) => {
+      const map = mapRef.current;
+      if (!map || !data) return;
+
+      const rings = data.buildings.features
+        .filter((f) => !ZOOM_ONLY_NAMES.has(f.properties.name ?? ""))
+        .map((f) => f.geometry.coordinates[0]);
+      if (rings.length === 0) return;
+
+      let w = Infinity,
+        s = Infinity,
+        e = -Infinity,
+        n = -Infinity;
+      for (const ring of rings) {
+        for (const [lon, lat] of ring) {
+          if (lon < w) w = lon;
+          if (lon > e) e = lon;
+          if (lat < s) s = lat;
+          if (lat > n) n = lat;
+        }
+      }
+      map.fitBounds(
+        [
+          [w, s],
+          [e, n],
+        ],
+        { padding: HOME_PAD, maxZoom: 17, bearing: 0, pitch: 0, duration },
+      );
+    },
+    [data],
+  );
+
   const framed = useRef(false);
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready || !data || framed.current || fix || trip) return;
-
-    const rings = data.buildings.features
-      .filter((f) => !ZOOM_ONLY_NAMES.has(f.properties.name ?? ""))
-      .map((f) => f.geometry.coordinates[0]);
-    if (rings.length === 0) return;
-
+    if (!ready || !data || framed.current || fix || trip) return;
     framed.current = true;
-    let w = Infinity,
-      s = Infinity,
-      e = -Infinity,
-      n = -Infinity;
-    for (const ring of rings) {
-      for (const [lon, lat] of ring) {
-        if (lon < w) w = lon;
-        if (lon > e) e = lon;
-        if (lat < s) s = lat;
-        if (lat > n) n = lat;
-      }
-    }
-    map.fitBounds(
-      [
-        [w, s],
-        [e, n],
-      ],
-      { padding: HOME_PAD, maxZoom: 17, duration: 0 },
-    );
-  }, [ready, data, fix, trip]);
+    fitHome(0);
+  }, [ready, data, fix, trip, fitHome]);
 
   /* ---------------- 圏内判定 ---------------- */
 
@@ -1353,9 +1363,10 @@ export default function Guide() {
               {geoState === "on" ? "🛰" : "📶"} ±{Math.round(fix?.accuracy ?? 0)}m
             </span>
           )}
+          {/* 右上のログイン表示と重なるので、短く「圏外」だけにする */}
           {geoState === "on" && inCampus === false && (
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur">
-              {T("圏外（キャンパス外）")}
+              {lang === "en" ? "Off campus" : "圏外"}
             </span>
           )}
         </div>
@@ -1863,11 +1874,20 @@ export default function Guide() {
               建物の前で初めて知るより、道中で分かっていたほうが動きやすい */}
           {trip.dest.sub && (
             <div className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white shadow">
-              <span className="opacity-80">建物の中では</span>
+              <span className="opacity-80">{T("建物の中では")}</span>
               <span className="text-[13px]">{floorLabelIn(lang, trip.dest.sub)}</span>
             </div>
           )}
 
+          {/* 経路を追って動かしたあと、最初の画角へ戻す。
+              案内は消さずに地図だけ戻すので、全体を見てから続きを追える */}
+          <button
+            onClick={() => fitHome(500)}
+            className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          >
+            <span className="text-[13px]">⤢</span>
+            {lang === "en" ? "Whole campus" : "全体に戻す"}
+          </button>
         </div>
       )}
     </div>
