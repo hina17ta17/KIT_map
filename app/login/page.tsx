@@ -6,13 +6,17 @@
  * ■ 申請の流れ
  *   ① メールアドレスと氏名を入れて［START］
  *      → 大学のドメインでないと押せない
- *   ② 届いたメールのリンクで本人確認
- *   ③ 認証アプリ（Authenticator）で二段階の確認を登録
- *   ④ 学年・クラス・組・パスワードを入れて申請完了
+ *   ② 認証アプリ（Authenticator）で本人確認
+ *   ③ 学年・クラス・組・パスワードを入れて申請完了
  *      → 管理者が承認するまでは学内情報を見られない
  *
- * メールと認証アプリの二つを通すのは、
- * 大学のアドレスを騙られても、その人自身でないと進めないようにするため。
+ * メールは送らない。無料の枠では1時間に数通しか出せず、
+ * 新入生が一斉に申請すると詰まってしまうため。
+ * 本人確認は認証アプリだけで行う。
+ *
+ * START の時点では仮のパスワードで席だけ作る。
+ * 認証アプリを登録するには先に入っている必要があるため。
+ * 本当のパスワードは ③ で本人が決める。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -31,7 +35,17 @@ import {
 } from "@/lib/auth";
 
 /** 申請のどこまで進んだか */
-type Step = "start" | "mail" | "mfa" | "detail" | "done";
+type Step = "start" | "mfa" | "detail" | "done";
+
+/**
+ * 席を作るときだけ使う仮のパスワード。
+ * 本人には見せないし、③ で本人が決めたものに置き換わる。
+ */
+function tempPassword(): string {
+  const a = new Uint8Array(18);
+  crypto.getRandomValues(a);
+  return Array.from(a, (n) => n.toString(36)).join("").slice(0, 24);
+}
 
 type Me = {
   email: string;
@@ -110,19 +124,32 @@ export default function LoginPage() {
     if (!canStart) return;
     setBusy(true);
     try {
-      const { error } = await createClient().auth.signInWithOtp({
+      const supabase = createClient();
+      // 認証アプリを登録するには、先に入っている必要がある。
+      // ここでは席を作るだけなので、パスワードは仮のものを使う。
+      // 本当のパスワードは、本人確認が済んだあとに本人が決める
+      const temp = tempPassword();
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
-        options: {
-          data: { full_name: name.trim() },
-          emailRedirectTo: typeof window !== "undefined" ? `${location.origin}/login` : undefined,
-        },
+        password: temp,
+        options: { data: { full_name: name.trim() } },
       });
-      if (error) throw error;
-      setStep("mail");
-      setMsg({
-        kind: "info",
-        text: "確認のメールを送りました。届いたリンクを開いてください。",
-      });
+
+      if (error) {
+        // すでに席がある場合は、そのままログインしてもらう
+        if (/already registered|already been registered/i.test(error.message)) {
+          setMsg({
+            kind: "err",
+            text: "このメールアドレスは登録済みです。［ログイン］から入ってください",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      await reload();
+      setStep("mfa");
+      setMsg({ kind: "info", text: "続けて、認証アプリで本人確認をしてください。" });
     } catch (e) {
       setMsg({ kind: "err", text: translate(e) });
     } finally {
@@ -417,13 +444,10 @@ export default function LoginPage() {
               メールアドレスと氏名の両方が要ります
             </p>
           )}
-          {step === "mail" && (
-            <p className="mt-3 rounded-xl bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
-              <b>メールを確認してください。</b>
-              <br />
-              届いたリンクを開くと、この画面に戻って続きに進めます。
-            </p>
-          )}
+          <p className="mt-3 rounded-xl bg-slate-50 p-3 text-[10px] leading-relaxed text-slate-500">
+            ［START］のあと、<b>認証アプリ（Authenticator）で本人確認</b>をします。
+            スマートフォンに Google Authenticator などを入れておいてください。
+          </p>
         </>
       )}
 
@@ -461,10 +485,12 @@ function Wizard(props: {
   if (step === "mfa") {
     return (
       <div className="mt-4">
-        <Head n={2} total={3} text="本人確認が必要です" />
+        <Head n={2} total={3} text="認証アプリで本人確認" />
         <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-          スマートフォンの<b>認証アプリ（Authenticator）</b>で本人確認をしてください。
+          スマートフォンの<b>認証アプリ</b>でQRを読み取り、出てきた6桁を入れてください。
           Google Authenticator や Microsoft Authenticator が使えます。
+          <br />
+          これができたら、所属の記入に進めます。
         </p>
 
         {!mfa ? (

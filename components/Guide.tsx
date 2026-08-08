@@ -25,7 +25,7 @@ import {
   type AppData,
   type SearchHit,
 } from "@/lib/appdata";
-import { ROLE_LABEL, canViewCampusInfo, type Role } from "@/lib/auth";
+import { ROLE_LABEL, ROLE_SHORT, canViewCampusInfo, type Role } from "@/lib/auth";
 import { LANG_KEY, floorLabelIn, placeName, t, type Lang } from "@/lib/i18n";
 import { buildGraph, buildSteps, findBestPath, nearestNode } from "@/lib/route";
 import CampusPanel from "./CampusPanel";
@@ -49,6 +49,12 @@ const HOME_ZOOM = 17;
 
 /** お気に入りを覚えておく名前 */
 const FAV_KEY = "kitmap.favorites";
+
+/* 地図の上を「押した」とみなす条件。指は必ず少し動くので幅を持たせる */
+/** これ以上ずれたら、押したのではなく地図を動かしたとみなす（点） */
+const TAP_SLIP = 14;
+/** これより長く押していたら、押したのではないとみなす（ミリ秒） */
+const TAP_HOLD = 700;
 
 /**
  * 起動時に画面へ収めるときの余白（画面上の点）。
@@ -86,14 +92,7 @@ function overlaps(a: LabelBox, b: LabelBox, gap = 3): boolean {
 }
 
 /** 右上の狭い場所に出す用の、短い権限名 */
-const SHORT_ROLE: Record<Role, string> = {
-  pending: "承認待ち",
-  student: "学生・教職員",
-  admin_l0: "管理者Lv0",
-  admin_l1: "管理者Lv1",
-  admin_l2: "管理者Lv2",
-  admin_l3: "管理者Lv3",
-};
+const SHORT_ROLE = ROLE_SHORT;
 
 type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
@@ -1024,6 +1023,39 @@ export default function Guide() {
     [pickedFrom, fix, focusBuilding],
   );
 
+  /**
+   * 地図の上のものを「押した」と判定する。
+   *
+   * click に任せると、指がほんの少し動いただけで取り消される。
+   * 地図の上は指を置けば地図が動き出す場所なので、これが頻繁に起きて
+   * 「押しても反応しない」ことがあった。
+   *
+   * 押し下げと離しを自分で見て、動いた量と時間が小さければ押したとみなす。
+   * 押し下げは地図に渡さない。渡すと地図が動き出して、そちらに持っていかれる。
+   */
+  const tapAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  const tapProps = useCallback(
+    (run: () => void) => ({
+      onPointerDown: (e: React.PointerEvent) => {
+        e.stopPropagation();
+        tapAt.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+      },
+      onPointerUp: (e: React.PointerEvent) => {
+        e.stopPropagation();
+        const s = tapAt.current;
+        tapAt.current = null;
+        if (!s) return;
+        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > TAP_SLIP) return;
+        if (Date.now() - s.t > TAP_HOLD) return;
+        run();
+      },
+      onPointerCancel: () => {
+        tapAt.current = null;
+      },
+    }),
+    [],
+  );
+
   const view = useMemo(() => {
     const map = mapRef.current;
     if (!map || !ready || !data) return null;
@@ -1251,15 +1283,19 @@ export default function Guide() {
               // 親は pointer-events-none なので、ここだけ auto に戻す
               <button
                 key={f.properties.tempId}
-                onClick={() => tapLabel(f.properties.tempId, label, f.geometry.coordinates[0])}
-                className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm transition active:scale-95 ${
+                {...tapProps(() =>
+                  tapLabel(f.properties.tempId, label, f.geometry.coordinates[0]),
+                )}
+                /* before:-inset-3 で、見た目を変えずに押せる範囲だけ広げる。
+                   文字が小さいので、そのままでは指の当たりが外れやすい */
+                className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm transition before:absolute before:-inset-3 before:content-[''] active:scale-95 ${
                   from
                     ? "bg-blue-600 text-white ring-2 ring-blue-300"
                     : on
                       ? "bg-orange-500 text-white"
                       : "bg-white/85 text-slate-800 hover:bg-white"
                 }`}
-                style={{ left: c.x, top: c.y, borderColor: cat.lineColor }}
+                style={{ left: c.x, top: c.y, borderColor: cat.lineColor, touchAction: "manipulation" }}
               >
                 {from && <span className="mr-1 opacity-80">{T("出発")}</span>}
                 {P(label)}

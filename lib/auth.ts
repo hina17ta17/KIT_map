@@ -72,13 +72,30 @@ export const CLASS_CODES = [
   { code: "BS", name: "生命・応用バイオ学科" },
 ] as const;
 
+/**
+ * 権限の呼び名。
+ *
+ * 段の番号ではなく、その人が何をする人かで呼ぶ。
+ * 「Lv1」では何ができるのか伝わらないため。
+ * いちばん強い権限だけは番号も段も出さず「管理者」とだけ書く。
+ */
 export const ROLE_LABEL: Record<Role, string> = {
   pending: "承認待ち",
   student: "学生・教職員",
-  admin_l0: "管理者 Lv0（大学の情報・食堂）",
-  admin_l1: "管理者 Lv1（放課後の予約）",
-  admin_l2: "管理者 Lv2（授業の予約）",
-  admin_l3: "管理者 Lv3（承認・昇降格）",
+  admin_l0: "食堂の担当",
+  admin_l1: "課外活動リーダー",
+  admin_l2: "教授",
+  admin_l3: "管理者",
+};
+
+/** 狭い場所に出す用。長さを揃えたいときに使う */
+export const ROLE_SHORT: Record<Role, string> = {
+  pending: "承認待ち",
+  student: "学生",
+  admin_l0: "食堂",
+  admin_l1: "課外活動",
+  admin_l2: "教授",
+  admin_l3: "管理者",
 };
 
 /** 学内情報を見られるか */

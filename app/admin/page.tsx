@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient, supabaseReady } from "@/lib/supabase/client";
 import { AdminHeader, AdminMenu } from "@/components/AdminNav";
-import { CLASS_CODES, GRADES, GROUPS, ROLE_LABEL, canManage, type Role } from "@/lib/auth";
+import { CLASS_CODES, GRADES, GROUPS, ROLE_LABEL, ROLE_SHORT, canManage, type Role } from "@/lib/auth";
 
 type Row = {
   id: string;
@@ -35,14 +35,7 @@ type Row = {
 /** ここから付けられる権限。Lv3 は入れない */
 const ASSIGNABLE: Role[] = ["pending", "student", "admin_l0", "admin_l1", "admin_l2"];
 
-const SHORT: Record<Role, string> = {
-  pending: "承認待ち",
-  student: "学生",
-  admin_l0: "Lv0",
-  admin_l1: "Lv1",
-  admin_l2: "Lv2",
-  admin_l3: "Lv3",
-};
+const SHORT = ROLE_SHORT;
 
 export default function AdminPage() {
   const [myRole, setMyRole] = useState<Role | null>(null);
