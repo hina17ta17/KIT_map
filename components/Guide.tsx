@@ -97,6 +97,65 @@ function overlaps(a: LabelBox, b: LabelBox, gap = 3): boolean {
 /** 右上の狭い場所に出す用の、短い権限名 */
 const SHORT_ROLE = ROLE_SHORT;
 
+/**
+ * 向きを元に戻すボタン。
+ *
+ * 二本指で回したり傾けたりできるが、戻し方が分からないと
+ * 傾いたままになってしまう。縮尺の下に置いて、いつでも north up に戻せるようにする。
+ *
+ * MapLibre の部品として足すのは、位置を自前で決めずに済むため。
+ * 同じ隅に足したものは足した順に下へ並ぶので、縮尺の下に収まる。
+ */
+class ResetView {
+  private box: HTMLDivElement | null = null;
+  private off: (() => void) | null = null;
+
+  onAdd(map: MlMap) {
+    const box = document.createElement("div");
+    box.className = "maplibregl-ctrl maplibregl-ctrl-group";
+
+    const b = document.createElement("button");
+    b.type = "button";
+    b.title = "向きを元に戻す";
+    b.setAttribute("aria-label", "向きを元に戻す");
+    b.style.cssText =
+      "width:29px;height:29px;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1";
+
+    const arrow = document.createElement("span");
+    arrow.textContent = "▲";
+    arrow.style.cssText = "display:block;color:#ef4444;transition:transform 120ms linear";
+    b.appendChild(arrow);
+
+    // 北がどちらを向いているかを、針の傾きで見せる
+    const sync = () => {
+      const deg = -map.getBearing();
+      arrow.style.transform = `rotate(${deg}deg)`;
+      // まっすぐなときは目立たせない
+      const straight = Math.abs(map.getBearing()) < 0.5 && Math.abs(map.getPitch()) < 0.5;
+      arrow.style.color = straight ? "#94a3b8" : "#ef4444";
+    };
+    sync();
+    map.on("rotate", sync);
+    map.on("pitch", sync);
+    this.off = () => {
+      map.off("rotate", sync);
+      map.off("pitch", sync);
+    };
+
+    b.onclick = () => map.easeTo({ bearing: 0, pitch: 0, duration: 400 });
+
+    box.appendChild(b);
+    this.box = box;
+    return box;
+  }
+
+  onRemove() {
+    this.off?.();
+    this.box?.remove();
+    this.box = null;
+  }
+}
+
 type Fix = { pos: Position; accuracy: number; at: number };
 /** 出発地。現在地か、検索で選んだ場所 */
 type Origin = { kind: "me" } | { kind: "place"; hit: SearchHit };
@@ -216,6 +275,9 @@ export default function Guide() {
     // 出典表示は MapLibre に任せず自前で出す（一覧に隠れると条件を満たせないため）
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ maxWidth: 90, unit: "metric" }), "top-right");
+    // 縮尺の下に置きたいので、縮尺のあとに足す。
+    // 同じ隅に足したものは、足した順に下へ並ぶ
+    map.addControl(new ResetView(), "top-right");
 
     /*
      * 描き直しの合図。1フレームに1回までにまとめる。
