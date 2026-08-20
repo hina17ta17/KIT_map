@@ -98,10 +98,11 @@ function overlaps(a: LabelBox, b: LabelBox, gap = 3): boolean {
 const SHORT_ROLE = ROLE_SHORT;
 
 /**
- * 向きを元に戻すボタン。
+ * 起動したときの見え方に戻すボタン。
  *
  * 二本指で回したり傾けたりできるが、戻し方が分からないと
- * 傾いたままになってしまう。縮尺の下に置いて、いつでも north up に戻せるようにする。
+ * そのままになってしまう。向きと傾きだけでなく、場所と縮尺も
+ * 起動したときへ戻す。迷ったらこれを押せば必ず元に戻る。
  *
  * MapLibre の部品として足すのは、位置を自前で決めずに済むため。
  * 同じ隅に足したものは足した順に下へ並ぶので、縮尺の下に収まる。
@@ -110,14 +111,17 @@ class ResetView {
   private box: HTMLDivElement | null = null;
   private off: (() => void) | null = null;
 
+  /** 押されたときにやること。起動時の枠合わせを外から渡す */
+  constructor(private readonly home: () => void) {}
+
   onAdd(map: MlMap) {
     const box = document.createElement("div");
     box.className = "maplibregl-ctrl maplibregl-ctrl-group";
 
     const b = document.createElement("button");
     b.type = "button";
-    b.title = "向きを元に戻す";
-    b.setAttribute("aria-label", "向きを元に戻す");
+    b.title = "起動したときの見え方に戻す";
+    b.setAttribute("aria-label", "起動したときの見え方に戻す");
     b.style.cssText =
       "width:29px;height:29px;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1";
 
@@ -142,7 +146,8 @@ class ResetView {
       map.off("pitch", sync);
     };
 
-    b.onclick = () => map.easeTo({ bearing: 0, pitch: 0, duration: 400 });
+    // 場所と縮尺は起動時の枠合わせに任せる。向きと傾きもそこで戻す
+    b.onclick = () => this.home();
 
     box.appendChild(b);
     this.box = box;
@@ -182,6 +187,8 @@ export default function Guide() {
   const retryTimer = useRef<number | null>(null);
   /** 現在地へ一度寄せたか。やめたら戻す */
   const centeredRef = useRef(false);
+  /** 起動時の見え方へ戻す処理。地図の部品から呼ぶので、ここで持ち回す */
+  const fitHomeRef = useRef<() => void>(() => {});
 
   /** 起動時のタイトル画面。0.4秒かけて上下に割れる */
   const [splash, setSplash] = useState<"open" | "closing" | "done">("open");
@@ -276,8 +283,9 @@ export default function Guide() {
     map.addControl(new NavigationControl({ visualizePitch: false }), "top-right");
     map.addControl(new ScaleControl({ maxWidth: 90, unit: "metric" }), "top-right");
     // 縮尺の下に置きたいので、縮尺のあとに足す。
-    // 同じ隅に足したものは、足した順に下へ並ぶ
-    map.addControl(new ResetView(), "top-right");
+    // 同じ隅に足したものは、足した順に下へ並ぶ。
+    // 押されたときの中身は毎回の描画で入れ直すので、常に最新が動く
+    map.addControl(new ResetView(() => fitHomeRef.current()), "top-right");
 
     /*
      * 描き直しの合図。1フレームに1回までにまとめる。
@@ -1192,6 +1200,7 @@ export default function Guide() {
   }, [ready, data, tick, route, graph, fix, highlight, areaOf]);
 
   /* 押されたときに見る値を、毎回の描画で入れ直す */
+  fitHomeRef.current = () => fitHome(500);
   hitRef.current =
     view?.buildings.map(({ f, c }) => ({
       id: f.properties.tempId,
