@@ -90,21 +90,43 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    const { data: p } = await supabase
-      .from("profiles")
-      .select("email, role, full_name, grade, class_code, group_no, verified")
-      .eq("id", data.user.id)
-      .single();
+
+    const read = async () =>
+      (
+        await supabase
+          .from("profiles")
+          .select("email, role, full_name, grade, class_code, group_no, verified")
+          .eq("id", data.user!.id)
+          .single()
+      ).data as Me | null;
+
+    let p = await read();
+
+    /*
+     * 席はあるのに情報が無いことがある。
+     * その状態だと、ログインできているのに画面では「誰でもない」扱いになり、
+     * ログインの画面が出たままになってしまう。
+     * 自分の行を作り直してから読み直す。作れるのは自分の行だけで、
+     * 権限は承認待ちから始まる。
+     */
+    if (!p) {
+      await supabase.rpc("ensure_profile");
+      p = await read();
+    }
+
     if (p) {
-      const row = p as Me;
-      setMe(row);
+      setMe(p);
       // 途中で閉じた人が続きから進められるようにする
-      setName(row.full_name);
-      setGrade(row.grade);
-      setClassCode(row.class_code);
-      setGroupNo(row.group_no);
-      if (!row.verified) setStep("mfa");
-      else if (!row.grade || !row.class_code || !row.group_no) setStep("detail");
+      setName(p.full_name);
+      setGrade(p.grade);
+      setClassCode(p.class_code);
+      setGroupNo(p.group_no);
+
+      // 申請の続きを求めるのは、まだ承認待ちの人だけ。
+      // すでに権限がある人（管理者など）を所属の記入で止めない
+      if (p.role !== "pending") setStep("done");
+      else if (!p.verified) setStep("mfa");
+      else if (!p.grade || !p.class_code || !p.group_no) setStep("detail");
       else setStep("done");
     }
     setLoading(false);
@@ -310,6 +332,13 @@ export default function LoginPage() {
           <b>{me.email}</b> でログイン中
         </p>
         <p className="mt-1 text-xs text-slate-500">{ROLE_LABEL[me.role]}</p>
+
+        {/* 権限がある人には、まずどこへ行けるかを見せる */}
+        {me.role !== "pending" && (
+          <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">
+            承認済みです。下のボタンから使えます。
+          </p>
+        )}
 
         {step !== "done" ? (
           <Wizard

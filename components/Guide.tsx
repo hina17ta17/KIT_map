@@ -479,11 +479,16 @@ export default function Guide() {
         if (!u.user) return;
         setEmail(u.user.email ?? null);
 
-        const { data: p } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", u.user.id)
-          .single();
+        const read = async () =>
+          (await supabase.from("profiles").select("role").eq("id", u.user!.id).single()).data;
+
+        let p = await read();
+        // 席はあるのに情報が無いことがある。その場で作り直してから読み直す
+        if (!p) {
+          await supabase.rpc("ensure_profile");
+          p = await read();
+        }
+
         const r = (p?.role as Role) ?? null;
         setRole(r);
         if (!canViewCampusInfo(r)) return;
