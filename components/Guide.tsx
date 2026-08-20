@@ -50,11 +50,14 @@ const HOME_ZOOM = 17;
 /** お気に入りを覚えておく名前 */
 const FAV_KEY = "kitmap.favorites";
 
-/* 地図の上を「押した」とみなす条件。指は必ず少し動くので幅を持たせる */
-/** これ以上ずれたら、押したのではなく地図を動かしたとみなす（点） */
-const TAP_SLIP = 14;
-/** これより長く押していたら、押したのではないとみなす（ミリ秒） */
-const TAP_HOLD = 700;
+/**
+ * ラベルを押したとみなす距離（画面の点）。
+ *
+ * 名前の見た目そのものより広く取る。指の腹は太く、11pxの文字を
+ * ぴったり突くのは難しいため。広げすぎると隣を誤って選ぶので、
+ * 押した場所にいちばん近いものを1つだけ選ぶ形にしてある。
+ */
+const TAP_NEAR = 30;
 
 /**
  * 起動時に画面へ収めるときの余白（画面上の点）。
@@ -235,6 +238,29 @@ export default function Guide() {
     };
     for (const ev of ["move", "zoom", "rotate", "resize", "load"] as const) map.on(ev, bump);
     map.on("load", () => setReady(true));
+
+    /*
+     * ラベルを押した判定。
+     *
+     * ラベル自身に押させると、その指が地図に届かなくなる。
+     * 二本指の片方が乗っただけでピンチが崩れるので、受け取るのは地図にして、
+     * 押された場所からいちばん近い名前を選ぶ形にした。
+     * 地図は指を滑らせたときには click を出さないので、
+     * 地図を動かしたのか押したのかは向こうが見分けてくれる。
+     */
+    map.on("click", (ev) => {
+      const { x, y } = ev.point;
+      let best: (typeof hitRef.current)[number] | null = null;
+      let bestD = TAP_NEAR;
+      for (const h of hitRef.current) {
+        const d = Math.hypot(h.x - x, h.y - y);
+        if (d < bestD) {
+          bestD = d;
+          best = h;
+        }
+      }
+      if (best) tapLabelRef.current(best.id, best.label, best.ring);
+    });
 
     /**
      * 描画面の大きさを測り直す。
@@ -1024,37 +1050,15 @@ export default function Guide() {
   );
 
   /**
-   * 地図の上のものを「押した」と判定する。
+   * 地図を押したときに使う、いまの画面上のラベルの位置。
    *
-   * click に任せると、指がほんの少し動いただけで取り消される。
-   * 地図の上は指を置けば地図が動き出す場所なので、これが頻繁に起きて
-   * 「押しても反応しない」ことがあった。
-   *
-   * 押し下げと離しを自分で見て、動いた量と時間が小さければ押したとみなす。
-   * 押し下げは地図に渡さない。渡すと地図が動き出して、そちらに持っていかれる。
+   * 地図の合図は一度しか登録しないので、その中から見える値は古いままになる。
+   * 毎回の描画で入れ直して、押されたときには最新を見られるようにする。
    */
-  const tapAt = useRef<{ x: number; y: number; t: number } | null>(null);
-  const tapProps = useCallback(
-    (run: () => void) => ({
-      onPointerDown: (e: React.PointerEvent) => {
-        e.stopPropagation();
-        tapAt.current = { x: e.clientX, y: e.clientY, t: Date.now() };
-      },
-      onPointerUp: (e: React.PointerEvent) => {
-        e.stopPropagation();
-        const s = tapAt.current;
-        tapAt.current = null;
-        if (!s) return;
-        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > TAP_SLIP) return;
-        if (Date.now() - s.t > TAP_HOLD) return;
-        run();
-      },
-      onPointerCancel: () => {
-        tapAt.current = null;
-      },
-    }),
-    [],
-  );
+  const hitRef = useRef<
+    { id: string; label: string; ring: Position[]; x: number; y: number }[]
+  >([]);
+  const tapLabelRef = useRef<(id: string, label: string, ring: Position[]) => void>(() => {});
 
   const view = useMemo(() => {
     const map = mapRef.current;
@@ -1124,6 +1128,17 @@ export default function Guide() {
       meR: fix ? radiusPx(map, fix.pos, fix.accuracy) : 0,
     };
   }, [ready, data, tick, route, graph, fix, highlight, areaOf]);
+
+  /* 押されたときに見る値を、毎回の描画で入れ直す */
+  hitRef.current =
+    view?.buildings.map(({ f, c }) => ({
+      id: f.properties.tempId,
+      label: f.properties.name || f.properties.code,
+      ring: f.geometry.coordinates[0],
+      x: c.x,
+      y: c.y,
+    })) ?? [];
+  tapLabelRef.current = tapLabel;
 
   /* ---------------- 表示 ---------------- */
 
@@ -1269,7 +1284,20 @@ export default function Guide() {
         </svg>
       )}
 
-      {/* 建物名。枠線は描かず、名前だけ置く */}
+      {/*
+        建物名。枠線は描かず、名前だけ置く。
+
+        ■ 押せる部品にしていない理由
+        この層は地図とは別の要素として上に重なっている。ここで指を受け取ると、
+        その指は地図に一切届かない。二本指の片方がラベルに乗っただけで
+        ピンチが片手扱いになり、拡大縮小がガタついていた。
+        名前は見せるだけにして、押した判定は地図の click から距離で行う。
+
+        ■ 位置を transform で動かす理由
+        left/top を書き換えると、そのたびに配置の計算がやり直される。
+        指で動かしているあいだ、42個ぶんそれが毎フレーム起きていた。
+        transform なら合成だけで済み、配置の計算は起きない。
+      */}
       {view && (
         <div className="pointer-events-none absolute inset-0" style={{ zIndex: 6 }}>
           {view.buildings.map(({ f, c }) => {
@@ -1279,27 +1307,23 @@ export default function Guide() {
             if (!label) return null;
             const from = pickedFrom?.buildingId === f.properties.tempId;
             return (
-              // 一つ目を押すと出発地、二つ目を押すと目的地になって案内が始まる。
-              // 親は pointer-events-none なので、ここだけ auto に戻す
-              <button
+              <div
                 key={f.properties.tempId}
-                {...tapProps(() =>
-                  tapLabel(f.properties.tempId, label, f.geometry.coordinates[0]),
-                )}
-                /* before:-inset-3 で、見た目を変えずに押せる範囲だけ広げる。
-                   文字が小さいので、そのままでは指の当たりが外れやすい */
-                className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm transition before:absolute before:-inset-3 before:content-[''] active:scale-95 ${
+                className={`absolute left-0 top-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm ${
                   from
                     ? "bg-blue-600 text-white ring-2 ring-blue-300"
                     : on
                       ? "bg-orange-500 text-white"
-                      : "bg-white/85 text-slate-800 hover:bg-white"
+                      : "bg-white/85 text-slate-800"
                 }`}
-                style={{ left: c.x, top: c.y, borderColor: cat.lineColor, touchAction: "manipulation" }}
+                style={{
+                  transform: `translate3d(${c.x}px, ${c.y}px, 0) translate(-50%, -50%)`,
+                  borderColor: cat.lineColor,
+                }}
               >
                 {from && <span className="mr-1 opacity-80">{T("出発")}</span>}
                 {P(label)}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -1310,7 +1334,7 @@ export default function Guide() {
       {email && (
         <a
           href="/login"
-          className="absolute right-4 top-4 z-10 flex max-w-[11rem] items-center gap-2 rounded-full bg-white/95 py-1.5 pl-2 pr-3 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          className="absolute right-4 top-4 z-10 flex max-w-[11rem] items-center gap-2 rounded-full bg-white py-1.5 pl-2 pr-3 shadow-md transition hover:bg-white active:scale-95"
           title={`${email}（${ROLE_LABEL[role ?? "pending"]}）`}
         >
           <span
@@ -1363,7 +1387,7 @@ export default function Guide() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={startWatch}
-            className="flex shrink-0 items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+            className="flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-md transition hover:bg-white active:scale-95"
           >
             <span
               className={`inline-block h-2.5 w-2.5 rounded-full ${
@@ -1381,13 +1405,13 @@ export default function Guide() {
 
           {/* 順調なあいだは短く。うまくいかないときだけ下に詳しく出す */}
           {geoState === "asking" && (
-            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-amber-600 shadow-sm backdrop-blur">
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-amber-600 shadow-sm">
               {lang === "en" ? "Finding…" : "取得中…"}
             </span>
           )}
           {(geoState === "on" || geoState === "rough") && (
             <span
-              className={`rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur ${
+              className={`rounded-full bg-white px-2.5 py-1 text-[11px] font-bold shadow-sm ${
                 geoState === "on" ? "text-emerald-600" : "text-amber-600"
               }`}
               title={
@@ -1401,7 +1425,7 @@ export default function Guide() {
           )}
           {/* 右上のログイン表示と重なるので、短く「圏外」だけにする */}
           {geoState === "on" && inCampus === false && (
-            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur">
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-500 shadow-sm">
               {lang === "en" ? "Off campus" : "圏外"}
             </span>
           )}
@@ -1419,7 +1443,7 @@ export default function Guide() {
           onClick={() => setFavPanel(true)}
           aria-label="お気に入り"
           title="お気に入り"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-lg shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg shadow-md transition hover:bg-white active:scale-95"
         >
           <span className={favs.length ? "text-amber-500" : "text-slate-300"}>★</span>
         </button>
@@ -1429,7 +1453,7 @@ export default function Guide() {
           <button
             onClick={() => setSide((v) => !v)}
             aria-label="学内の情報"
-            className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-white/95 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+            className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-white shadow-md transition hover:bg-white active:scale-95"
           >
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "translate-y-[6px] rotate-45" : ""}`} />
             <span className={`block h-0.5 w-5 rounded-full bg-slate-700 transition ${side ? "opacity-0" : ""}`} />
@@ -1442,7 +1466,7 @@ export default function Guide() {
         <button
           onClick={toggleLang}
           aria-label={lang === "ja" ? "Switch to English" : "日本語に切り替え"}
-          className={`flex h-11 w-11 items-center justify-center rounded-xl text-[11px] font-bold shadow-md backdrop-blur transition active:scale-95 ${
+          className={`flex h-11 w-11 items-center justify-center rounded-xl text-[11px] font-bold shadow-md transition active:scale-95 ${
             lang === "en"
               ? "bg-blue-600 text-white shadow-blue-500/50 ring-2 ring-blue-300"
               : "bg-white/95 text-slate-700 hover:bg-white"
@@ -1475,7 +1499,7 @@ export default function Guide() {
           geoState === "timeout" ||
           geoState === "unavailable" ||
           geoState === "insecure") && (
-          <div className="max-w-[16rem] rounded-2xl bg-white/95 px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm backdrop-blur">
+          <div className="max-w-[16rem] rounded-2xl bg-white px-3 py-1.5 text-[11px] font-medium leading-relaxed text-slate-600 shadow-sm">
             {geoState === "denied" && (
               <>
                 現在地が拒否されています
@@ -1592,7 +1616,7 @@ export default function Guide() {
       {/* 建物一覧。下からせり上がって広がる */}
       {listed.length > 0 && (
         <div
-          className="absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-t-3xl bg-white/95 shadow-2xl backdrop-blur"
+          className="absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-t-3xl bg-white shadow-2xl"
           style={{
             height: listOpen ? "58dvh" : "3.25rem",
             transition: "height 350ms cubic-bezier(0.32,0.72,0,1)",
@@ -1879,7 +1903,7 @@ export default function Guide() {
       {/* 案内中。手順の一覧は出さず、地図の道と最小限の情報だけ見せる */}
       {trip && (
         <div className="absolute bottom-16 left-4 z-20 w-[min(18rem,calc(100%-2rem))]">
-          <div className="flex items-center gap-2 rounded-full bg-white/95 py-2 pl-4 pr-2 shadow-md backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full bg-white py-2 pl-4 pr-2 shadow-md">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold leading-tight text-slate-900">
                 {P(trip.dest.title)}
@@ -1919,7 +1943,7 @@ export default function Guide() {
               案内は消さずに地図だけ戻すので、全体を見てから続きを追える */}
           <button
             onClick={() => fitHome(500)}
-            className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-md backdrop-blur transition hover:bg-white active:scale-95"
+            className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-md transition hover:bg-white active:scale-95"
           >
             <span className="text-[13px]">⤢</span>
             {lang === "en" ? "Whole campus" : "全体に戻す"}

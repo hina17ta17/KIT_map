@@ -265,7 +265,7 @@ export default function LoginPage() {
   const signIn = async () => {
     setMsg(null);
     if (!isAllowedEmail(email)) {
-      setMsg({ kind: "err", text: "大学のメールアドレスで入ってください" });
+      setMsg({ kind: "err", text: "メールアドレスかパスワードが違います" });
       return;
     }
     setBusy(true);
@@ -386,7 +386,7 @@ export default function LoginPage() {
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="大学のメールアドレス"
+            placeholder="メールアドレス"
             autoComplete="email"
             className={inputCls}
           />
@@ -410,19 +410,22 @@ export default function LoginPage() {
         <>
           {/* ① メールと氏名 → START */}
           <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-            大学のメールアドレスと氏名を入れて［START］を押すと、
+            大学から配られたメールアドレスと氏名を入れて［START］を押すと、
             本人確認のメールが届きます。
           </p>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="大学のメールアドレス"
+            placeholder="メールアドレス"
             autoComplete="email"
             className={`${inputCls} mt-2`}
           />
+          {/* どのドメインなら通るかは書かない。
+              書くと、大学の関係者でない人にも当てはめ先を教えることになる。
+              条件に合わない、とだけ伝える */}
           {email.length > 0 && !domainOk && (
             <p className="mt-1 pl-1 text-[10px] font-bold text-red-600">
-              大学のメールアドレス（@st.kanazawa-it.ac.jp など）でないと申請できません
+              このメールアドレスでは申請できません
             </p>
           )}
           <input
